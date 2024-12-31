@@ -142,8 +142,10 @@ class WebtoonScraperGUI:
         )
         
         # 啟動定時檢查線程
-        self.schedule_thread = threading.Thread(target=self.run_schedule)
-        self.schedule_thread.daemon = True
+        self.schedule_thread = threading.Thread(
+            target=self.run_schedule,
+            daemon=True
+        )
         self.schedule_thread.start()
         
         self.log_message(
@@ -197,6 +199,10 @@ class WebtoonScraperGUI:
             
             scraper = WebtoonScraper(base_url, title_no)
             self.log_message("開始獲取漫畫信息...")
+            
+            # 初始化變量
+            webtoon_info = None
+            chapters_data = None
             
             # 獲取基本信息
             html_content = scraper.get_page_content()
