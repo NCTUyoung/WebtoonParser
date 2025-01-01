@@ -7,6 +7,9 @@ import schedule
 import time
 import pytz
 from version import VERSION
+from tzlocal import get_localzone
+import pandas as pd
+import re
 
 class WebtoonScraperGUI:
     def __init__(self, root):
@@ -19,10 +22,18 @@ class WebtoonScraperGUI:
         self.main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         # URL輸入區域
-        ttk.Label(self.main_frame, text="Webtoon URL:").grid(row=0, column=0, sticky=tk.W)
-        self.url_entry = ttk.Entry(self.main_frame, width=50)
-        self.url_entry.grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
-        self.url_entry.insert(0, "https://www.webtoons.com/zh-hant/bl-gl/friday-night/list?title_no=6875")
+        url_frame = ttk.LabelFrame(self.main_frame, text="Webtoon URLs", padding="5")
+        url_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
+        
+        # 使用Text widget替代Entry
+        self.url_text = tk.Text(url_frame, height=4, width=50)
+        self.url_text.grid(row=0, column=0, padx=5, pady=5)
+        self.url_text.insert("1.0", "https://www.webtoons.com/zh-hant/bl-gl/friday-night/list?title_no=6875\n")
+        
+        # 添加滾動條
+        scrollbar = ttk.Scrollbar(url_frame, orient="vertical", command=self.url_text.yview)
+        scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        self.url_text.configure(yscrollcommand=scrollbar.set)
         
         # 定時設置區域
         schedule_frame = ttk.LabelFrame(self.main_frame, text="定時設置", padding="5")
@@ -54,14 +65,22 @@ class WebtoonScraperGUI:
         
         # 時區選擇
         ttk.Label(schedule_frame, text="時區:").grid(row=0, column=8, padx=5)
-        self.timezone_var = tk.StringVar(value="Asia/Taipei")
+        
+        # 獲取系統本地時區
+        local_timezone = str(get_localzone())
+        self.timezone_var = tk.StringVar(value=local_timezone)
+        
         timezones = [
-            "Asia/Taipei",
-            "Asia/Tokyo",
-            "Asia/Seoul",
-            "Asia/Shanghai",
-            "UTC"
+            local_timezone,  # 本地時區
+            'Asia/Taipei',
+            'Asia/Tokyo',
+            'Asia/Seoul',
+            'Asia/Shanghai',
+            'UTC'
         ]
+        # 移除重複項（如果本地時區與列表中的時區重複）
+        timezones = list(dict.fromkeys(timezones))
+        
         self.timezone_combo = ttk.Combobox(
             schedule_frame, 
             textvariable=self.timezone_var, 
@@ -175,9 +194,11 @@ class WebtoonScraperGUI:
         
     def start_scraping(self):
         """開始爬取數據"""
-        url = self.url_entry.get()
-        if not url:
-            messagebox.showerror("錯誤", "請輸入URL")
+        urls = self.url_text.get("1.0", tk.END).strip().split('\n')
+        urls = [url.strip() for url in urls if url.strip()]
+        
+        if not urls:
+            messagebox.showerror("錯誤", "請輸入至少一個URL")
             return
             
         self.start_button.state(['disabled'])
@@ -185,51 +206,78 @@ class WebtoonScraperGUI:
         self.progress_var.set("正在爬取數據...")
         
         # 在新線程中執行爬蟲
-        thread = threading.Thread(target=self.scrape_data, args=(url,))
+        thread = threading.Thread(target=self.scrape_multiple_data, args=(urls,))
         thread.daemon = True
         thread.start()
-        
-    def scrape_data(self, url):
-        """執行爬蟲操作"""
+
+    def scrape_multiple_data(self, urls):
+        """執行多個URL的爬蟲操作"""
         try:
-            # 從URL中提取title_no
-            import re
-            title_no = re.search(r'title_no=(\d+)', url).group(1)
-            base_url = url.split('?')[0]
+            all_webtoon_info = []
+            all_chapters_data = []
             
-            scraper = WebtoonScraper(base_url, title_no)
-            self.log_message("開始獲取漫畫信息...")
+            for url in urls:
+                self.log_message(f"開始爬取: {url}")
+                
+                try:
+                    # 從URL中提取title_no
+                    title_no = re.search(r'title_no=(\d+)', url).group(1)
+                    base_url = url.split('?')[0]
+                    
+                    scraper = WebtoonScraper(base_url, title_no)
+                    
+                    # 獲取基本信息
+                    html_content = scraper.get_page_content()
+                    if html_content:
+                        soup = scraper.parse_content(html_content)
+                        if soup:
+                            webtoon_info = scraper.get_webtoon_info(soup)
+                            if webtoon_info:
+                                all_webtoon_info.append(webtoon_info)
+                                self.log_message(f"成功獲取 {webtoon_info['標題']} 的基本信息")
+                    
+                    # 獲取章節信息
+                    self.log_message(f"開始獲取章節列表...")
+                    chapters_data = scraper.scrape_all_pages()
+                    if chapters_data and webtoon_info:
+                        self.log_message(f"成功獲取 {len(chapters_data['章節標題'])} 個章節")
+                        chapters_df = pd.DataFrame(chapters_data)
+                        chapters_df['漫畫標題'] = webtoon_info['標題']
+                        all_chapters_data.append(chapters_df)
+                    
+                    # 添加延遲避免請求過快
+                    time.sleep(2)
+                    
+                except Exception as e:
+                    self.log_message(f"爬取 {url} 時發生錯誤: {str(e)}")
+                    continue
             
-            # 初始化變量
-            webtoon_info = None
-            chapters_data = None
-            
-            # 獲取基本信息
-            html_content = scraper.get_page_content()
-            if html_content:
-                soup = scraper.parse_content(html_content)
-                if soup:
-                    webtoon_info = scraper.get_webtoon_info(soup)
-                    self.log_message("成功獲取漫畫基本信息")
-            
-            # 獲取章節信息
-            self.log_message("開始獲取章節列表...")
-            chapters_data = scraper.scrape_all_pages()
-            
-            if webtoon_info and chapters_data:
-                excel_filename = f'webtoon_data_{datetime.now().strftime("%Y%m%d")}.xlsx'
-                scraper.save_to_excel(webtoon_info, chapters_data, excel_filename)
-                self.log_message(f"數據已保存到: {excel_filename}")
+            if all_webtoon_info and all_chapters_data:
+                # 合併所有數據
+                combined_info = pd.DataFrame(all_webtoon_info)
+                combined_chapters = pd.concat(all_chapters_data, ignore_index=True)
+                
+                # 重新排列列的順序，確保漫畫標題在前面
+                columns_order = ['漫畫標題', '章節標題', '發布日期', '點讚數', '章節編號']
+                combined_chapters = combined_chapters[columns_order]
+                
+                # 保存到Excel的不同工作表
+                excel_filename = f'webtoon_data_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+                with pd.ExcelWriter(excel_filename) as writer:
+                    combined_info.to_excel(writer, sheet_name='漫畫資訊', index=False)
+                    combined_chapters.to_excel(writer, sheet_name='章節列表', index=False)
+                
+                self.log_message(f"所有數據已保存到: {excel_filename}")
                 messagebox.showinfo("完成", f"爬取完成！\n數據已保存到: {excel_filename}")
             else:
-                raise Exception("無法獲取完整數據")
+                raise Exception("無法獲取任何完整數據")
                 
         except Exception as e:
             self.log_message(f"錯誤: {str(e)}")
             messagebox.showerror("錯誤", str(e))
         finally:
             self.root.after(0, self.finish_scraping)
-            
+
     def finish_scraping(self):
         """完成爬取後的清理工作"""
         self.progress_bar.stop()

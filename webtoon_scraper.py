@@ -7,6 +7,7 @@ import logging
 import time
 from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
+import re
 
 # 設置日誌
 logging.basicConfig(
@@ -33,14 +34,80 @@ class WebtoonScraper(WebScraper):
     def get_total_pages(self, soup):
         """獲取總頁數"""
         try:
-            # 找到頁碼列表
-            pagination = soup.find('div', class_='paginate')
-            if pagination:
-                # 獲取最後一個頁碼
-                pages = pagination.find_all('a')
-                if pages:
-                    return int(pages[-1].text)
-            return 1
+            all_pages = set()  # 使用集合避免重複頁碼
+            visited_urls = set()  # 記錄已訪問的URL
+            
+            while True:
+                # 找到頁碼列表
+                pagination = soup.find('div', class_='paginate')
+                if not pagination:
+                    break
+                    
+                # 獲取當前頁面的所有頁碼
+                page_links = pagination.find_all('a')
+                for link in page_links:
+                    try:
+                        # 從href中提取頁碼
+                        href = link.get('href', '')
+                        page_match = re.search(r'page=(\d+)', href)
+                        if page_match:
+                            all_pages.add(int(page_match.group(1)))
+                        # 同時檢查文本頁碼
+                        if link.text.strip().isdigit():
+                            all_pages.add(int(link.text.strip()))
+                    except (ValueError, AttributeError):
+                        continue
+                    
+                # 檢查導航按鈕
+                next_group = pagination.find('a', class_='pg_next')
+                prev_group = pagination.find('a', class_='pg_prev')
+                
+                # 優先使用下一組，如果沒有則嘗試上一組
+                nav_link = next_group or prev_group
+                if not nav_link:
+                    break
+                    
+                # 獲取新的URL
+                next_url = nav_link['href']
+                
+                # 處理URL
+                if next_url.startswith('http'):
+                    full_url = next_url
+                else:
+                    # 從當前URL中提取基礎部分
+                    current_base = re.match(r'(https?://[^?]+)', self.url)
+                    if current_base:
+                        base = current_base.group(1)
+                        # 如果next_url是完整路徑
+                        if next_url.startswith('/'):
+                            full_url = f"https://www.webtoons.com{next_url}"
+                        else:
+                            full_url = f"{base}?{next_url.split('?')[1]}"
+                    else:
+                        break
+                    
+                # 如果這個URL已經訪問過，則退出
+                if full_url in visited_urls:
+                    break
+                
+                visited_urls.add(full_url)
+                
+                # 獲取下一組頁面
+                self.url = full_url
+                html_content = self.get_page_content()
+                if not html_content:
+                    break
+                    
+                soup = self.parse_content(html_content)
+                if not soup:
+                    break
+                    
+                time.sleep(1)  # 添加延遲避免請求過快
+                
+            total_pages = max(all_pages) if all_pages else 1
+            logging.info(f"檢測到總頁數: {total_pages}")
+            return total_pages
+                
         except Exception as e:
             logging.error(f"獲取總頁數時發生錯誤: {e}")
             return 1
@@ -66,18 +133,25 @@ class WebtoonScraper(WebScraper):
         total_pages = self.get_total_pages(soup)
         logging.info(f"總頁數: {total_pages}")
 
-        # 爬取每一頁
-        for page in range(1, total_pages + 1):
+        # 處理第一頁的數據
+        page_data = self.parse_webtoon_content(soup)
+        if page_data:
+            for key in all_data:
+                all_data[key].extend(page_data[key])
+
+        # 爬取剩餘頁面
+        for page in range(2, total_pages + 1):
             logging.info(f"正在爬取第 {page} 頁")
             
-            if page > 1:
-                self.url = self.get_url(page)
-                html_content = self.get_page_content()
-                if not html_content:
-                    continue
-                soup = self.parse_content(html_content)
-                if not soup:
-                    continue
+            # 更新URL到新的頁面
+            self.url = self.get_url(page)
+            html_content = self.get_page_content()
+            if not html_content:
+                continue
+            
+            soup = self.parse_content(html_content)
+            if not soup:
+                continue
 
             page_data = self.parse_webtoon_content(soup)
             if page_data:
@@ -85,8 +159,9 @@ class WebtoonScraper(WebScraper):
                     all_data[key].extend(page_data[key])
 
             # 添加延遲避免請求過快
-            time.sleep(2)
+            time.sleep(1)
 
+        logging.info(f"共獲取 {len(all_data['章節標題'])} 個章節")
         return all_data
 
     def parse_webtoon_content(self, soup):
