@@ -1,0 +1,36 @@
+@use './variables.scss' as *;
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: $background-color-base;
+  color: $text-primary;
+}
+
+.el-card {
+  margin-bottom: $spacing-large;
+  border-radius: $border-radius-large;
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
+}
+
+.el-button {
+  &--primary {
+    background-color: $primary-color;
+  }
+  
+  &--success {
+    background-color: $success-color;
+  }
+  
+  &--warning {
+    background-color: $warning-color;
+  }
+  
+  &--danger {
+    background-color: $danger-color;
+  }
+} 
