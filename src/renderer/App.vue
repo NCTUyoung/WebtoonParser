@@ -39,10 +39,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import zhTw from 'element-plus/es/locale/lang/zh-tw'
-import { ipcRenderer, IpcRendererEvent } from 'electron'
 import UrlInput from './components/UrlInput.vue'
 import ScheduleSettings from './components/ScheduleSettings.vue'
 import LogViewer from './components/LogViewer.vue'
@@ -61,8 +60,8 @@ const urls = ref('')
 const logs = ref<LogMessage[]>([])
 const isScheduleRunning = ref(false)
 
-// 定時設置
-const scheduleSettings = reactive({
+// 將 scheduleSettings 改為 ref，使其能被子組件的 v-model 正確更新
+const scheduleSettings = ref({
   day: '五',
   hour: '18',
   minute: '00',
@@ -71,17 +70,19 @@ const scheduleSettings = reactive({
 
 // 開始爬取
 const startScraping = async () => {
+  console.log('startScraping 觸發');
+  console.log('urls.value:', urls.value);
   if (!urls.value) {
     ElMessage.warning('請輸入至少一個URL')
     return
   }
   
   const urlList = urls.value.split('\n').filter(url => url.trim())
-  ipcRenderer.send('start-scraping', urlList)
+  await window.electron.invoke('start-scraping', urlList)
   urlInputRef.value?.setLoading(true)
 }
 
-// 切換定時任務
+// 切換定時任務，注意使用 scheduleSettings.value
 const toggleSchedule = () => {
   if (!isScheduleRunning.value) {
     if (!urls.value.trim()) {
@@ -89,10 +90,10 @@ const toggleSchedule = () => {
       return
     }
     
-    ipcRenderer.send('start-schedule', scheduleSettings)
+    window.electron.send('start-schedule', { ...scheduleSettings.value })
     isScheduleRunning.value = true
   } else {
-    ipcRenderer.send('stop-schedule')
+    window.electron.send('stop-schedule')
     isScheduleRunning.value = false
   }
 }
@@ -102,33 +103,54 @@ const clearLogs = () => {
   logs.value = []
 }
 
-// 監聽主進程消息
-onMounted(() => {
-  ipcRenderer.on('log-message', (_: IpcRendererEvent, message: string) => {
+// 存儲 URLs
+const saveUrls = () => {
+  window.electron.send('save-urls', urls.value)
+}
+
+// 在啟動時讀取之前保存的 URLs，並添加 beforeunload 事件
+onMounted(async () => {
+  try {
+    urls.value = await window.electron.invoke('load-urls')
+  } catch (error) {
+    console.error('加載保存的 URLs 失敗:', error)
+  }
+  
+  window.electron.on('log-message', (message: string) => {
     logs.value.push({
       time: new Date().toLocaleTimeString(),
       message
     })
   })
   
-  ipcRenderer.on('scraping-complete', (_: IpcRendererEvent) => {
+  window.electron.on('scraping-complete', () => {
     urlInputRef.value?.setLoading(false)
     ElMessage.success('爬取完成')
   })
   
-  ipcRenderer.on('scraping-error', (_: IpcRendererEvent, error: string) => {
+  window.electron.on('scraping-error', (error: string) => {
     urlInputRef.value?.setLoading(false)
     ElMessage.error(error)
   })
   
-  ipcRenderer.on('schedule-trigger', (_: IpcRendererEvent) => startScraping())
+  window.electron.on('schedule-trigger', () => {
+    console.log('收到 schedule-trigger 事件');
+    // 檢查 urls 是否還存在
+    console.log('urls.value:', urls.value);
+    startScraping();
+  })
+
+  // 當關閉應用前保存最新 URL
+  window.addEventListener('beforeunload', saveUrls)
 })
 
+// 清除監聽事件
 onUnmounted(() => {
-  ipcRenderer.removeAllListeners('log-message')
-  ipcRenderer.removeAllListeners('scraping-complete')
-  ipcRenderer.removeAllListeners('scraping-error')
-  ipcRenderer.removeAllListeners('schedule-trigger')
+  window.electron.removeAllListeners('log-message')
+  window.electron.removeAllListeners('scraping-complete')
+  window.electron.removeAllListeners('scraping-error')
+  window.electron.removeAllListeners('schedule-trigger')
+  window.removeEventListener('beforeunload', saveUrls)
 })
 </script>
 

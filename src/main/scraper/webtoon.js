@@ -207,61 +207,38 @@ class WebtoonScraper {
     const savePath = path.join(app.getPath('downloads'), filename)
     
     try {
-      // 檢查是否已存在 Excel 文件
       if (require('fs').existsSync(savePath)) {
         await workbook.xlsx.readFile(savePath)
       }
       
-      // 使用作品名稱作為工作表名稱（移除不允許的字符）
       let sheetName = info.title.replace(/[\\/?*[\]]/g, '').slice(0, 31) || '未知作品'
-      
-      // 檢查工作表是否已存在
       let worksheet = workbook.getWorksheet(sheetName)
       if (worksheet) {
-        // 如果工作表已存在，刪除它（更新數據）
         workbook.removeWorksheet(worksheet.id)
       }
-      
-      // 創建新的工作表
       worksheet = workbook.addWorksheet(sheetName)
       
-      // 設置表頭
+      // 組織所有章節資料，不再限制只讀取前 10 章
+      const chaptersByNumber = {}
+      chapters.forEach(chapter => {
+        const num = parseInt(chapter.number.replace('#', ''))
+        // 移除 if (num <= 10) 限制：全部章節都寫入
+        const likes = chapter.likes.replace(/[^0-9,]/g, '')
+        // key 形式如 ch01、ch02、...、ch15 ...
+        chaptersByNumber[`ch${num.toString().padStart(2, '0')}`] = likes
+      })
+      
+      // 根據章節鍵動態生成表頭，先排序後再映射到 columns 中
+      const chapterColumns = Object.keys(chaptersByNumber).sort()
       worksheet.columns = [
         { header: '日期', key: 'date', width: 20 },
         { header: '作者', key: 'author', width: 30 },
         { header: '總觀看數', key: 'views', width: 15 },
         { header: '訂閱數', key: 'subscribers', width: 15 },
         { header: '評分', key: 'rating', width: 10 },
-        { header: 'CH01', key: 'ch01', width: 10 },
-        { header: 'CH02', key: 'ch02', width: 10 },
-        { header: 'CH03', key: 'ch03', width: 10 },
-        { header: 'CH04', key: 'ch04', width: 10 },
-        { header: 'CH05', key: 'ch05', width: 10 },
-        { header: 'CH06', key: 'ch06', width: 10 },
-        { header: 'CH07', key: 'ch07', width: 10 },
-        { header: 'CH08', key: 'ch08', width: 10 },
-        { header: 'CH09', key: 'ch09', width: 10 },
-        { header: 'CH10', key: 'ch10', width: 10 }
+        ...chapterColumns.map(key => ({ header: key.toUpperCase(), key: key, width: 10 }))
       ]
       
-      // 設置表頭樣式
-      worksheet.getRow(1).fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFFFF2CC' }
-      }
-      
-      // 組織章節數據
-      const chaptersByNumber = {}
-      chapters.forEach(chapter => {
-        const num = parseInt(chapter.number.replace('#', ''))
-        if (num <= 10) {
-          const likes = chapter.likes.replace(/[^0-9,]/g, '')
-          chaptersByNumber[`ch${num.toString().padStart(2, '0')}`] = likes
-        }
-      })
-      
-      // 添加數據行
       const row = {
         date: new Date().toLocaleString('zh-TW', {
           year: 'numeric',
@@ -280,7 +257,7 @@ class WebtoonScraper {
       
       worksheet.addRow(row)
       
-      // 設置單元格樣式
+      // 其餘如單元格樣式設定保持不變
       worksheet.eachRow((row, rowNumber) => {
         row.eachCell((cell) => {
           cell.border = {
@@ -290,13 +267,11 @@ class WebtoonScraper {
             right: { style: 'thin' }
           }
           
-          // 只對非評分欄位進行整數轉換
           if (typeof cell.value === 'string' && !isNaN(cell.value)) {
             const columnName = worksheet.getColumn(cell.col).key
             if (columnName !== 'rating') {
               cell.value = parseInt(cell.value.replace(/,/g, ''))
             } else {
-              // 評分保留小數點
               cell.value = parseFloat(cell.value)
             }
           }

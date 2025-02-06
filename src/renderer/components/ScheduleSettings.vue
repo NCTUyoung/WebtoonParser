@@ -66,7 +66,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 
 const props = defineProps({
   schedule: {
@@ -91,12 +91,22 @@ const timezones = [
   'UTC'
 ]
 
+// 建立本地 reactive 對象，初始化取自 props
 const scheduleForm = reactive({
   day: props.schedule.day,
   hour: props.schedule.hour,
   minute: props.schedule.minute,
   timezone: props.schedule.timezone
 })
+
+// 監聽 scheduleForm 的變化，將更新後的值發射出去
+watch(
+  scheduleForm,
+  (newVal) => {
+    emit('update:schedule', { ...newVal })
+  },
+  { deep: true }
+)
 
 // 計算時間值
 const timeValue = computed({
@@ -110,19 +120,13 @@ const timeValue = computed({
     if (value) {
       scheduleForm.hour = value.getHours().toString().padStart(2, '0')
       scheduleForm.minute = value.getMinutes().toString().padStart(2, '0')
-      updateSchedule()
     }
   }
 })
 
-// 更新設置
-const updateSchedule = () => {
-  emit('update:schedule', { ...scheduleForm })
-}
-
 // 處理時間變更
 const handleTimeChange = () => {
-  updateSchedule()
+  // 變更已經被 watch 捕捉，會自動發送更新
 }
 
 // 處理切換定時

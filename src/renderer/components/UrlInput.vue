@@ -19,7 +19,7 @@
       </template>
       
       <el-input
-        v-model="inputUrls"
+        v-model="value"
         type="textarea"
         :rows="4"
         :maxlength="500"
@@ -41,80 +41,49 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
+<script setup lang="ts">
+import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { ipcRenderer } from 'electron'
 
-const inputUrls = ref('')
-const isLoading = ref(false)
-
-// 加載保存的 URLs
-onMounted(async () => {
-  try {
-    const savedUrls = await ipcRenderer.invoke('load-urls')
-    if (savedUrls) {
-      inputUrls.value = savedUrls
-    }
-  } catch (error) {
-    console.error('加載保存的 URLs 失敗:', error)
+// 接收父組件傳來的 modelValue
+const props = defineProps({
+  modelValue: {
+    type: String,
+    default: ''
   }
 })
 
+// 為了實現 v-model 的雙向綁定，定義 emit 事件
+const emit = defineEmits(['update:modelValue'])
+
+// 通過 computed 屬性來讀寫 modelValue
+const value = computed({
+  get: () => props.modelValue,
+  set: (val: string) => emit('update:modelValue', val)
+})
+
+const isLoading = ref(false)
+
 const handleStartScraping = async () => {
-  if (!inputUrls.value.trim()) {
+  if (!value.value.trim()) {
     ElMessage.warning('請輸入至少一個URL')
     return
   }
   
-  try {
-    isLoading.value = true
-    // 分割多個 URL
-    const urls = inputUrls.value.split('\n').map(u => u.trim()).filter(u => u)
-    
-    // 移除之前的監聽器
-    ipcRenderer.removeAllListeners('scraping-complete')
-    ipcRenderer.removeAllListeners('scraping-error')
-    ipcRenderer.removeAllListeners('log-message')
-    
-    // 監聽日誌消息
-    ipcRenderer.on('log-message', (event, message) => {
-      console.log(message)
-    })
-    
-    // 發送爬取請求
-    ipcRenderer.send('start-scraping', urls)
-    
-    // 監聽完成事件
-    ipcRenderer.on('scraping-complete', () => {
-      ElMessage.success(`完成爬取 ${urls.length} 個作品`)
-      isLoading.value = false
-      // 清理監聽器
-      ipcRenderer.removeAllListeners('scraping-complete')
-      ipcRenderer.removeAllListeners('scraping-error')
-      ipcRenderer.removeAllListeners('log-message')
-    })
-    
-    // 監聽錯誤事件
-    ipcRenderer.on('scraping-error', (event, error) => {
-      console.error('爬取錯誤:', error)
-      ElMessage.error(`爬取失敗: ${error}`)
-      isLoading.value = false
-      // 清理監聽器
-      ipcRenderer.removeAllListeners('scraping-complete')
-      ipcRenderer.removeAllListeners('scraping-error')
-      ipcRenderer.removeAllListeners('log-message')
-    })
-  } catch (error) {
-    console.error('爬取錯誤:', error)
-    ElMessage.error(`爬取失敗: ${error.message}`)
-    isLoading.value = false
+  // 分割多個 URL
+  const urls = value.value.split('\n').map(u => u.trim()).filter(u => u)
+  
+  for (const singleUrl of urls) {
+    console.log('開始爬取:', singleUrl)
+    await window.electron.startScraping(singleUrl)
   }
+  
+  ElMessage.success(`完成爬取 ${urls.length} 個作品`)
 }
 
 // 提供給父組件的方法
 defineExpose({
-  setLoading: (loading) => {
+  setLoading: (loading: boolean) => {
     isLoading.value = loading
   }
 })
