@@ -62,29 +62,34 @@ app.on('activate', () => {
 })
 
 // 處理爬蟲請求
-ipcMain.handle('start-scraping', async (event, url) => {
+ipcMain.handle('start-scraping', async (event, urls) => {
   try {
-    console.log('開始爬取URL:', url)
-    const scraper = new WebtoonScraper(url)
+    // 確保 urls 是陣列
+    const urlList = Array.isArray(urls) ? urls : [urls]
     
-    // 使用 event.sender.send() 來發送消息
-    event.sender.send('log-message', `開始爬取: ${url}`)
-    
-    console.log('獲取漫畫基本信息...')
-    const info = await scraper.getWebtoonInfo()
-    console.log('基本信息:', info)
-    event.sender.send('log-message', `成功獲取 ${info.title} 的基本信息`)
-    
-    console.log('開始獲取章節列表...')
-    event.sender.send('log-message', '開始獲取章節列表...')
-    const chapters = await scraper.getAllChapters()
-    console.log(`獲取到 ${chapters.length} 個章節`)
-    event.sender.send('log-message', `成功獲取 ${chapters.length} 個章節`)
-    
-    console.log('保存數據到Excel...')
-    await scraper.saveToExcel(info, chapters)
-    console.log('Excel保存完成')
-    event.sender.send('log-message', '數據已保存到Excel文件')
+    // 依序處理每個 URL
+    for (const url of urlList) {
+      console.log('開始爬取URL:', url)
+      const scraper = new WebtoonScraper(url)
+      
+      event.sender.send('log-message', `開始爬取: ${url}`)
+      
+      console.log('獲取漫畫基本信息...')
+      const info = await scraper.getWebtoonInfo()
+      console.log('基本信息:', info)
+      event.sender.send('log-message', `成功獲取 ${info.title} 的基本信息`)
+      
+      console.log('開始獲取章節列表...')
+      event.sender.send('log-message', '開始獲取章節列表...')
+      const chapters = await scraper.getAllChapters()
+      console.log(`獲取到 ${chapters.length} 個章節`)
+      event.sender.send('log-message', `成功獲取 ${chapters.length} 個章節`)
+      
+      console.log('保存數據到Excel...')
+      await scraper.saveToExcel(info, chapters)
+      console.log('Excel保存完成')
+      event.sender.send('log-message', '數據已保存到Excel文件')
+    }
     
     return { success: true }
   } catch (error) {

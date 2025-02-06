@@ -1,77 +1,73 @@
 <template>
-  <el-card class="schedule-card">
-    <template #header>
-      <div class="card-header">
-        <span>定時設置</span>
-        <el-button 
-          :type="isRunning ? 'danger' : 'primary'"
-          @click="handleToggle"
-        >
-          {{ isRunning ? '停止定時' : '啟動定時' }}
-        </el-button>
-      </div>
-    </template>
-    
-    <div class="schedule-form">
-      <el-form :model="scheduleForm" inline>
-        <!-- 星期選擇 -->
+  <div class="schedule-settings">
+    <div class="settings-form">
+      <el-form :model="settings" inline>
         <el-form-item label="星期">
           <el-select 
-            v-model="scheduleForm.day"
-            style="width: 90px"
+            v-model="settings.day" 
+            class="day-select"
+            @change="onSettingChange"
           >
             <el-option
-              v-for="day in days"
-              :key="day"
-              :label="day"
-              :value="day"
+              v-for="day in weekDays"
+              :key="day.value"
+              :label="day.label"
+              :value="day.value"
             />
           </el-select>
         </el-form-item>
-        
-        <!-- 時間選擇 -->
+
         <el-form-item label="時間">
           <el-time-picker
             v-model="timeValue"
             format="HH:mm"
-            :disabled-hours="disabledHours"
-            @change="handleTimeChange"
+            placeholder="選擇時間"
+            class="time-picker"
+            @change="onSettingChange"
           />
         </el-form-item>
-        
-        <!-- 時區選擇 -->
+
         <el-form-item label="時區">
           <el-select 
-            v-model="scheduleForm.timezone"
-            style="width: 140px"
+            v-model="settings.timezone" 
+            class="timezone-select"
+            @change="onSettingChange"
           >
             <el-option
-              v-for="tz in timezones"
-              :key="tz"
-              :label="tz"
-              :value="tz"
+              v-for="zone in timezones"
+              :key="zone"
+              :label="zone"
+              :value="zone"
             />
           </el-select>
         </el-form-item>
       </el-form>
     </div>
-    
-    <div class="schedule-status" v-if="isRunning">
-      <el-tag type="success">
-        定時已啟動: 每{{ scheduleForm.day }} {{ scheduleForm.hour }}:{{ scheduleForm.minute }}
-        ({{ scheduleForm.timezone }})
-      </el-tag>
+
+    <div class="schedule-actions">
+      <el-button 
+        type="primary" 
+        :class="{ 'is-running': isRunning }"
+        @click="toggleSchedule"
+      >
+        {{ isRunning ? '停止定時' : '啟動定時' }}
+      </el-button>
     </div>
-  </el-card>
+  </div>
 </template>
 
-<script setup>
-import { ref, reactive, computed, watch } from 'vue'
+<script setup lang="ts">
+import { ref, computed, watch } from 'vue'
 
 const props = defineProps({
   schedule: {
     type: Object,
-    required: true
+    default: () => ({
+      day: '五',
+      hour: '18',
+      minute: '00',
+      timezone: 'Asia/Taipei'
+    })
   },
   isRunning: {
     type: Boolean,
@@ -81,81 +77,140 @@ const props = defineProps({
 
 const emit = defineEmits(['update:schedule', 'toggle-schedule'])
 
-const days = ['一', '二', '三', '四', '五', '六', '日']
-const timezones = [
-  Intl.DateTimeFormat().resolvedOptions().timeZone,
-  'Asia/Taipei',
-  'Asia/Tokyo',
-  'Asia/Seoul',
-  'Asia/Shanghai',
-  'UTC'
-]
+// 建立本地狀態，用來作為表單綁定的數據，並避免直接修改 props
+const settings = ref({ ...props.schedule })
 
-// 建立本地 reactive 對象，初始化取自 props
-const scheduleForm = reactive({
-  day: props.schedule.day,
-  hour: props.schedule.hour,
-  minute: props.schedule.minute,
-  timezone: props.schedule.timezone
-})
-
-// 監聽 scheduleForm 的變化，將更新後的值發射出去
-watch(
-  scheduleForm,
-  (newVal) => {
-    emit('update:schedule', { ...newVal })
-  },
-  { deep: true }
-)
-
-// 計算時間值
+// 時間選擇器的值，用本地 settings 中的 hour 與 minute 生成 Date 物件
 const timeValue = computed({
   get: () => {
-    const now = new Date()
-    now.setHours(parseInt(scheduleForm.hour))
-    now.setMinutes(parseInt(scheduleForm.minute))
-    return now
+    const time = new Date()
+    time.setHours(parseInt(settings.value.hour))
+    time.setMinutes(parseInt(settings.value.minute))
+    return time
   },
-  set: (value) => {
+  set: (value: Date) => {
     if (value) {
-      scheduleForm.hour = value.getHours().toString().padStart(2, '0')
-      scheduleForm.minute = value.getMinutes().toString().padStart(2, '0')
+      settings.value.hour = value.getHours().toString().padStart(2, '0')
+      settings.value.minute = value.getMinutes().toString().padStart(2, '0')
+      // 不直接發送更新，由下面的 watch 處理同步
     }
   }
 })
 
-// 處理時間變更
-const handleTimeChange = () => {
-  // 變更已經被 watch 捕捉，會自動發送更新
+// 當本地數據發生改變時，僅在與父組件傳入的數據不同時才發送更新
+const updateSettings = () => {
+  if (JSON.stringify(settings.value) !== JSON.stringify(props.schedule)) {
+    emit('update:schedule', { ...settings.value })
+  }
 }
 
-// 處理切換定時
-const handleToggle = () => {
+// 當本地 settings 改變時觸發更新到父組件
+watch(
+  settings,
+  () => {
+    updateSettings()
+  },
+  { deep: true }
+)
+
+// 當父組件的 schedule 更新時，同步到本地（避免重複更新）
+watch(
+  () => props.schedule,
+  (newVal) => {
+    if (JSON.stringify(newVal) !== JSON.stringify(settings.value)) {
+      settings.value = { ...newVal }
+    }
+  },
+  { deep: true }
+)
+
+// 星期選項
+const weekDays = [
+  { label: '星期一', value: '一' },
+  { label: '星期二', value: '二' },
+  { label: '星期三', value: '三' },
+  { label: '星期四', value: '四' },
+  { label: '星期五', value: '五' },
+  { label: '星期六', value: '六' },
+  { label: '星期日', value: '日' }
+]
+
+// 時區選項
+const timezones = [
+  'Asia/Taipei',
+  'Asia/Tokyo',
+  'Asia/Shanghai',
+  'Asia/Singapore',
+  'Asia/Seoul'
+]
+
+// 切換定時任務
+const toggleSchedule = () => {
   emit('toggle-schedule')
 }
 
-// 禁用的小時
-const disabledHours = () => {
-  return []
+// 當選擇星期、時間或時區時觸發更新
+const onSettingChange = () => {
+  updateSettings()
 }
 </script>
 
 <style scoped>
-.schedule-card {
-  margin-bottom: 20px;
-}
-
-.card-header {
+.schedule-settings {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 10px 0;
 }
 
-.schedule-form {
-  margin-bottom: 16px;
+.settings-form {
+  flex: 1;
 }
 
-.schedule-status {
-  margin-top: 16px;
+.day-select {
+  width: 100px;
+}
+
+.time-picker {
+  width: 140px;
+}
+
+.timezone-select {
+  width: 140px;
+}
+
+.schedule-actions {
+  margin-left: 20px;
+}
+
+.is-running {
+  background-color: #f56c6c;
+  border-color: #f56c6c;
+}
+
+:deep(.el-form--inline .el-form-item) {
+  margin-right: 20px;
+}
+
+@media (max-width: 768px) {
+  .schedule-settings {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .settings-form :deep(.el-form--inline) {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .schedule-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .schedule-actions .el-button {
+    width: 100%;
+  }
 }
 </style> 

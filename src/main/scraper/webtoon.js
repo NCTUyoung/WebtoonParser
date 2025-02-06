@@ -228,8 +228,12 @@ class WebtoonScraper {
         chaptersByNumber[`ch${num.toString().padStart(2, '0')}`] = likes
       })
       
-      // 根據章節鍵動態生成表頭，先排序後再映射到 columns 中
-      const chapterColumns = Object.keys(chaptersByNumber).sort()
+      // 根據章節鍵中 "ch" 後面的數字進行排序
+      const chapterColumns = Object.keys(chaptersByNumber).sort((a, b) => {
+        const numA = parseInt(a.slice(2))
+        const numB = parseInt(b.slice(2))
+        return numA - numB
+      })
       worksheet.columns = [
         { header: '日期', key: 'date', width: 20 },
         { header: '作者', key: 'author', width: 30 },
