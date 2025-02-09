@@ -36,6 +36,16 @@
           />
         </el-card>
 
+        <!-- 儲存設置區域 -->
+        <el-card class="section-card">
+          <template #header>
+            <div class="card-header">
+              <h2>儲存設置</h2>
+            </div>
+          </template>
+          <SavePathSettings v-model="savePath" />
+        </el-card>
+
         <!-- 日誌查看區域 -->
         <el-card class="section-card log-card">
           <template #header>
@@ -59,12 +69,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import zhTw from 'element-plus/es/locale/lang/zh-tw'
 import UrlInput from './components/UrlInput.vue'
 import ScheduleSettings from './components/ScheduleSettings.vue'
 import LogViewer from './components/LogViewer.vue'
+import SavePathSettings from './components/SavePathSettings.vue'
 import type { LogMessage } from './types'
 
 // 環境變量
@@ -88,24 +99,30 @@ const scheduleSettings = ref({
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
 })
 
+// 儲存路徑
+const savePath = ref('')
+
+// 添加調試日誌
+console.log('inin savePath:', savePath.value)
+
 // 開始爬取函數，使用 invoke 與主進程的 ipcMain.handle 對應
 const startScraping = async () => {
   console.log('startScraping 觸發')
   console.log('urls.value:', urls.value)
 
-  // 若沒有輸入 URL，則直接提醒用戶
   if (!urls.value) {
     ElMessage.warning('請輸入至少一個 URL')
     return
   }
 
-  // 將輸入的 URL 按行拆分並去除多餘空白，濾除空值
-  
+  // 將輸入的 URL 拆分成陣列
   const urlList = urls.value.split('\n').filter(url => url.trim())
   try {
-    // 使用 invoke 送出請求 => 主進程屬於 ipcMain.handle('start-scraping', …)
-    await window.electron.invoke('start-scraping', urlList)
-    // 設置 loading 狀態
+    // 傳入 obj：包含 urls 與 savePath，savePath 從 SavePathSettings 中獲取
+    await window.electron.invoke('start-scraping', {
+      urls: urlList,
+      savePath: savePath.value
+    })
     urlInputRef.value?.setLoading(true)
   } catch (error: any) {
     console.error('爬取發生錯誤：', error)
@@ -139,12 +156,42 @@ const saveUrls = () => {
   window.electron.send('save-urls', urls.value)
 }
 
-// 在啟動時讀取之前保存的 URLs，並添加 beforeunload 事件
+// 存儲定時設置
+const saveScheduleSettings = () => {
+  window.electron.send('save-schedule-settings', { ...scheduleSettings.value })
+}
+
+// 監聽儲存路徑的變化
+watch(savePath, (newValue, oldValue) => {
+  // 只有當值真正改變時才保存
+  if (newValue !== oldValue) {
+    console.log('Save path changed:', { newValue, oldValue })
+    saveSavePath()
+  }
+})
+
+// 修改 saveSavePath 函數
+const saveSavePath = () => {
+  console.log('Saving path:', savePath.value)
+  window.electron.send('save-save-path', savePath.value)
+}
+
+// 在啟動時讀取之前保存的 URLs 和定時設置
 onMounted(async () => {
   try {
+    // 讀取已保存的 URLs
     urls.value = await window.electron.invoke('load-urls')
+    
+    // 讀取已保存的定時設置
+    const savedSettings = await window.electron.invoke('load-schedule-settings')
+    scheduleSettings.value = savedSettings
+    
+    // 讀取已保存的儲存路徑
+    const savedPath = await window.electron.invoke('load-save-path')
+    console.log('Loaded save path:', savedPath)
+    savePath.value = savedPath
   } catch (error) {
-    console.error('加載保存的 URLs 失敗:', error)
+    console.error('Failed to load settings:', error)
   }
   
   window.electron.on('log-message', (message: string) => {
@@ -171,9 +218,18 @@ onMounted(async () => {
     startScraping();
   })
 
-  // 當關閉應用前保存最新 URL
-  window.addEventListener('beforeunload', saveUrls)
+  // 當關閉應用前保存所有設置
+  window.addEventListener('beforeunload', () => {
+    saveUrls()
+    saveScheduleSettings()
+    saveSavePath()
+  })
 })
+
+// 監聽定時設置的變化
+watch(scheduleSettings, () => {
+  saveScheduleSettings()
+}, { deep: true })
 
 // 清除監聽事件
 onUnmounted(() => {
@@ -181,7 +237,11 @@ onUnmounted(() => {
   window.electron.removeAllListeners('scraping-complete')
   window.electron.removeAllListeners('scraping-error')
   window.electron.removeAllListeners('schedule-trigger')
-  window.removeEventListener('beforeunload', saveUrls)
+  window.removeEventListener('beforeunload', () => {
+    saveUrls()
+    saveScheduleSettings()
+    saveSavePath()
+  })
 })
 </script>
 
@@ -260,7 +320,8 @@ onUnmounted(() => {
 /* 日誌卡片特殊樣式 */
 .log-card .el-card__body {
   padding: 0;
-  height: 300px;
+  height: auto;
+  min-height: 300px;
   background: #1e1e1e;
 }
 

@@ -1,6 +1,6 @@
-const { app, BrowserWindow, ipcMain } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const path = require('path')
-const WebtoonScraper = require('./scraper/webtoon')
+const WebtoonScraper = require('./webtoon')
 const schedule = require('node-schedule')
 const Store = require('electron-store')
 
@@ -43,7 +43,7 @@ function createWindow() {
     }, 2000)
     mainWindow.webContents.openDevTools()
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
+    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
 }
 
@@ -62,39 +62,40 @@ app.on('activate', () => {
 })
 
 // 處理爬蟲請求
-ipcMain.handle('start-scraping', async (event, urls) => {
+ipcMain.handle('start-scraping', async (event, args) => {
   try {
-    // 確保 urls 是陣列
-    const urlList = Array.isArray(urls) ? urls : [urls]
-    
+    // 從傳入的 args 中獲取 urls 與 savePath
+    const urlList = Array.isArray(args.urls) ? args.urls : [args.urls]
+    const externalSavePath = args.savePath
+
     // 依序處理每個 URL
     for (const url of urlList) {
-      console.log('開始爬取URL:', url)
+      console.log('Starting to scrape URL:', url)
       const scraper = new WebtoonScraper(url)
       
-      event.sender.send('log-message', `開始爬取: ${url}`)
+      event.sender.send('log-message', `Starting to scrape: ${url}`)
       
-      console.log('獲取漫畫基本信息...')
+      console.log('Getting comic basic information...')
       const info = await scraper.getWebtoonInfo()
-      console.log('基本信息:', info)
-      event.sender.send('log-message', `成功獲取 ${info.title} 的基本信息`)
+      console.log('Basic information:', info)
+      event.sender.send('log-message', `Successfully got basic information for ${info.title}`)
       
-      console.log('開始獲取章節列表...')
-      event.sender.send('log-message', '開始獲取章節列表...')
+      console.log('Starting to get chapter list...')
+      event.sender.send('log-message', 'Starting to get chapter list...')
       const chapters = await scraper.getAllChapters()
-      console.log(`獲取到 ${chapters.length} 個章節`)
-      event.sender.send('log-message', `成功獲取 ${chapters.length} 個章節`)
+      console.log(`Got ${chapters.length} chapters`)
+      event.sender.send('log-message', `Successfully got ${chapters.length} chapters`)
       
-      console.log('保存數據到Excel...')
-      await scraper.saveToExcel(info, chapters)
-      console.log('Excel保存完成')
-      event.sender.send('log-message', '數據已保存到Excel文件')
+      console.log('Saving data to Excel...')
+      await scraper.saveToExcel(info, chapters, externalSavePath)
+      console.log('Excel saving completed')
+      event.sender.send('log-message', 'Data saved to Excel file')
     }
     
     return { success: true }
   } catch (error) {
-    console.error('爬取過程出錯:', error)
-    event.sender.send('log-message', `錯誤: ${error.message}`)
+    console.error('Scraping process error:', error)
+    event.sender.send('log-message', `Error: ${error.message}`)
     event.sender.send('scraping-error', error.message)
     throw error
   }
@@ -128,11 +129,11 @@ ipcMain.on('start-schedule', (event, settings) => {
 
   // 如果設定的是今天且已經過了，立即觸發一次
   if (now.getDay() === rule.dayOfWeek && now > scheduledTime) {
-    event.reply('log-message', '已過設定時間，立即執行一次爬取');
+    event.reply('log-message', 'Past the set time, executing once immediately');
     // 立即觸發一次，再設定定時任務
     mainWindow.webContents.send('schedule-trigger');
   } else {
-    event.reply('log-message', '等待下一次排程時間到達');
+    event.reply('log-message', 'Waiting for next schedule time to arrive');
   }
 
   const job = schedule.scheduleJob(rule, () => {
@@ -140,7 +141,7 @@ ipcMain.on('start-schedule', (event, settings) => {
   });
 
   scheduleJobs.set('main', job);
-  event.reply('log-message', `定時任務已啟動: 每週${day} ${hour}:${minute} (${timezone})`);
+  event.reply('log-message', `Schedule task started: Every ${day} ${hour}:${minute} (${timezone})`);
 
   const nextInvocation = job.nextInvocation();
   const formattedNextInvocation = nextInvocation.toLocaleString('zh-TW', {
@@ -153,7 +154,7 @@ ipcMain.on('start-schedule', (event, settings) => {
       minute: '2-digit',
       second: '2-digit'
   });
-  event.reply('log-message', `下一次觸發時間：${formattedNextInvocation}`);
+  event.reply('log-message', `Next trigger time: ${formattedNextInvocation}`);
 });
 
 ipcMain.on('stop-schedule', (event) => {
@@ -161,7 +162,7 @@ ipcMain.on('stop-schedule', (event) => {
   if (job) {
     job.cancel()
     scheduleJobs.delete('main')
-    event.reply('log-message', '定時任務已停止')
+    event.reply('log-message', 'Schedule task stopped')
   }
 })
 
@@ -172,4 +173,54 @@ ipcMain.handle('load-urls', () => {
 
 ipcMain.on('save-urls', (event, urls) => {
   store.set('webtoon-urls', urls)
+})
+
+// 處理定時設置的存儲和讀取
+ipcMain.handle('load-schedule-settings', () => {
+  return store.get('schedule-settings', {
+    day: '五',
+    hour: '18',
+    minute: '00',
+    timezone: 'Asia/Taipei'
+  })
+})
+
+ipcMain.on('save-schedule-settings', (event, settings) => {
+  store.set('schedule-settings', settings)
+})
+
+// 處理儲存路徑
+ipcMain.handle('select-directory', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory']
+  })
+  
+  if (!result.canceled) {
+    console.log('Selected new path:', result.filePaths[0])
+    return result.filePaths[0]
+  }
+  return null
+})
+
+ipcMain.handle('load-save-path', () => {
+  try {
+    const savedPath = store.get('save-path')
+    console.log('Loaded save path:', savedPath)
+    return savedPath
+  } catch (error) {
+    console.error('Failed to load save path:', error)
+    return app.getPath('downloads')
+  }
+})
+
+ipcMain.on('save-save-path', (event, path) => {
+  try {
+    console.log('Saving path:', path)
+    store.set('save-path', path)
+    console.log('Confirmed saved path:', store.get('save-path'))
+    event.reply('log-message', `Save path updated: ${path}`)
+  } catch (error) {
+    console.error('Failed to save path:', error)
+    event.reply('log-message', `Failed to save path: ${error.message}`)
+  }
 }) 

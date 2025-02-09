@@ -201,10 +201,25 @@ class WebtoonScraper {
     return `${this.baseUrl}?title_no=${this.titleNo}&page=${page}`
   }
   
-  async saveToExcel(info, chapters) {
+  async saveToExcel(info, chapters, externalSavePath) {
     let workbook = new ExcelJS.Workbook()
     const filename = `webtoon_stats_${new Date().toISOString().slice(0,10)}.xlsx`
-    const savePath = path.join(app.getPath('downloads'), filename)
+    let savePath
+    if (externalSavePath) {
+      const fs = require('fs')
+      // 檢查 externalSavePath 是否存在以及是否為資料夾
+      const stats = fs.existsSync(externalSavePath) ? fs.lstatSync(externalSavePath) : null
+      if (stats && stats.isDirectory()) {
+        // 如果是資料夾，將檔案名稱與路徑結合
+        savePath = path.join(externalSavePath, filename)
+      } else {
+        // 否則視為完整的檔案路徑
+        savePath = externalSavePath
+      }
+    } else {
+      // 如果沒有提供 externalSavePath，預設使用下載路徑
+      savePath = path.join(app.getPath('downloads'), filename)
+    }
     
     try {
       if (require('fs').existsSync(savePath)) {
@@ -218,13 +233,11 @@ class WebtoonScraper {
       }
       worksheet = workbook.addWorksheet(sheetName)
       
-      // 組織所有章節資料，不再限制只讀取前 10 章
+      // 組織所有章節資料
       const chaptersByNumber = {}
       chapters.forEach(chapter => {
         const num = parseInt(chapter.number.replace('#', ''))
-        // 移除 if (num <= 10) 限制：全部章節都寫入
         const likes = chapter.likes.replace(/[^0-9,]/g, '')
-        // key 形式如 ch01、ch02、...、ch15 ...
         chaptersByNumber[`ch${num.toString().padStart(2, '0')}`] = likes
       })
       
@@ -261,7 +274,7 @@ class WebtoonScraper {
       
       worksheet.addRow(row)
       
-      // 其餘如單元格樣式設定保持不變
+      // 設定邊框及格子樣式
       worksheet.eachRow((row, rowNumber) => {
         row.eachCell((cell) => {
           cell.border = {
@@ -291,7 +304,7 @@ class WebtoonScraper {
       })
       
       await workbook.xlsx.writeFile(savePath)
-      this.log(`已保存工作表: ${sheetName}`)
+      this.log(`已保存工作表: ${sheetName}, 路徑: ${savePath}`)
       
       return savePath
     } catch (error) {

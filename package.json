@@ -1,9 +1,11 @@
 {
   "name": "webtoon-scraper",
   "version": "1.0.0",
-  "main": "src/main/index.js",
+  "description": "A webtoon scraper tool",
+  "author": "Your Name <your.email@example.com>",
+  "main": "./out/main/index.js",
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "cross-env ELECTRON_ENTRY=src/main/index.js electron-vite dev",
     "build": "electron-vite build && electron-builder",
     "build:win": "electron-vite build && electron-builder --win --config electron-builder.config.js",
     "build:mac": "electron-vite build && electron-builder --mac --config electron-builder.config.js",
@@ -25,6 +27,7 @@
     "@types/node": "^20.11.20",
     "@vitejs/plugin-vue": "^5.0.4",
     "@vue/compiler-sfc": "^3.4.19",
+    "cross-env": "^7.0.3",
     "electron": "^29.0.1",
     "electron-builder": "^24.12.0",
     "electron-vite": "^2.0.0",

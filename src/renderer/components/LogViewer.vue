@@ -54,6 +54,7 @@ watch(() => props.logs, async () => {
   max-height: 50vh;
   overflow-y: auto;
   padding: 10px;
+  padding-bottom: 15px; /* 增加底部內邊距 */
   font-family: 'Consolas', monospace;
   white-space: pre-wrap;
   word-wrap: break-word;

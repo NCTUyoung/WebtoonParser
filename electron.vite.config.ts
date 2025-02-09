@@ -7,8 +7,18 @@ export default defineConfig({
   main: {
     build: {
       rollupOptions: {
+        input: {
+          index: 'src/main/index.js',
+          webtoon: 'src/main/webtoon.js'
+        },
         external: ['electron-store']
-      }
+      },
+      outDir: 'out/main',
+    }
+  },
+  preload: {
+    build: {
+      outDir: 'out/preload'
     }
   },
   renderer: {
@@ -30,7 +40,8 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, 'src/renderer/index.html')
         }
-      }
+      },
+      outDir: 'out/renderer'
     }
   }
 }) 

@@ -9,6 +9,7 @@ const config = {
     output: 'dist'
   },
   files: [
+    'out/**/*',
     'dist/**/*',
     'package.json'
   ],
@@ -19,7 +20,6 @@ const config = {
         arch: ['x64']
       }
     ],
-    icon: 'build/icon.ico'
   },
   nsis: {
     oneClick: false,
