@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron')
 const path = require('path')
 const WebtoonScraper = require('./webtoon')
 const schedule = require('node-schedule')
@@ -222,5 +222,25 @@ ipcMain.on('save-save-path', (event, path) => {
   } catch (error) {
     console.error('Failed to save path:', error)
     event.reply('log-message', `Failed to save path: ${error.message}`)
+  }
+})
+
+// 處理 URL 歷史記錄
+ipcMain.handle('load-url-history', () => {
+  return store.get('url-history', [])
+})
+
+ipcMain.on('save-url-history', (event, history) => {
+  store.set('url-history', history)
+})
+
+// 處理在新視窗開啟URL
+ipcMain.on('open-external-url', (event, url) => {
+  try {
+    console.log('Opening external URL:', url)
+    shell.openExternal(url)
+  } catch (error) {
+    console.error('Failed to open external URL:', error)
+    event.reply('log-message', `無法開啟URL: ${error.message}`)
   }
 }) 

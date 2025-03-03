@@ -1,0 +1,122 @@
+{
+  "name": "src",
+  "type": "directory",
+  "children": [
+    {
+      "name": "main",
+      "type": "directory",
+      "children": [
+        {
+          "name": "index.js",
+          "type": "file",
+          "file_type": "js"
+        },
+        {
+          "name": "webtoon.js",
+          "type": "file",
+          "file_type": "js"
+        }
+      ]
+    },
+    {
+      "name": "preload",
+      "type": "directory",
+      "children": [
+        {
+          "name": "index.js",
+          "type": "file",
+          "file_type": "js"
+        }
+      ]
+    },
+    {
+      "name": "renderer",
+      "type": "directory",
+      "children": [
+        {
+          "name": "App.vue",
+          "type": "file",
+          "file_type": "vue"
+        },
+        {
+          "name": "components",
+          "type": "directory",
+          "children": [
+            {
+              "name": "LogViewer.vue",
+              "type": "file",
+              "file_type": "vue"
+            },
+            {
+              "name": "SavePathSettings.vue",
+              "type": "file",
+              "file_type": "vue"
+            },
+            {
+              "name": "ScheduleSettings.vue",
+              "type": "file",
+              "file_type": "vue"
+            },
+            {
+              "name": "UrlInput.vue",
+              "type": "file",
+              "file_type": "vue"
+            }
+          ]
+        },
+        {
+          "name": "electron.d.ts",
+          "type": "file",
+          "file_type": "ts"
+        },
+        {
+          "name": "env.d.ts",
+          "type": "file",
+          "file_type": "ts"
+        },
+        {
+          "name": "index.html",
+          "type": "file",
+          "file_type": "html"
+        },
+        {
+          "name": "main.js",
+          "type": "file",
+          "file_type": "js"
+        },
+        {
+          "name": "shims-vue.d.ts",
+          "type": "file",
+          "file_type": "ts"
+        },
+        {
+          "name": "styles",
+          "type": "directory",
+          "children": [
+            {
+              "name": "global.scss",
+              "type": "file",
+              "file_type": "scss"
+            },
+            {
+              "name": "variables.scss",
+              "type": "file",
+              "file_type": "scss"
+            }
+          ]
+        },
+        {
+          "name": "types",
+          "type": "directory",
+          "children": [
+            {
+              "name": "index.ts",
+              "type": "file",
+              "file_type": "ts"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

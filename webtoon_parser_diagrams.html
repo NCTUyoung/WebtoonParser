@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webtoon爬蟲工具圖表</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #202124;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #1a73e8;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #1a73e8;
+            margin-top: 40px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #dadce0;
+        }
+        .diagram {
+            margin: 30px 0;
+            text-align: center;
+        }
+        .diagram img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+        }
+        .description {
+            margin: 20px 0;
+            line-height: 1.6;
+        }
+        footer {
+            margin-top: 50px;
+            text-align: center;
+            color: #5f6368;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Webtoon爬蟲工具圖表</h1>
+        
+        <div class="description">
+            <p>本文檔展示了Webtoon爬蟲工具的架構、數據流程和類圖，幫助理解系統的設計和工作原理。</p>
+        </div>
+        
+        <h2>1. 系統架構圖</h2>
+        <div class="description">
+            <p>系統架構圖展示了Webtoon爬蟲工具的主要組件及其關係，包括GUI界面、爬蟲核心和數據輸出等部分。</p>
+        </div>
+        <div class="diagram">
+            <object data="webtoon_parser_architecture.svg" type="image/svg+xml" width="1000" height="800">
+                <img src="webtoon_parser_architecture.svg" alt="Webtoon爬蟲工具架構圖">
+            </object>
+        </div>
+        
+        <h2>2. 數據流程圖</h2>
+        <div class="description">
+            <p>數據流程圖展示了數據如何在系統中流動，從用戶輸入URL到最終生成Excel文件的完整過程。</p>
+        </div>
+        <div class="diagram">
+            <object data="webtoon_parser_data_flow.svg" type="image/svg+xml" width="1000" height="700">
+                <img src="webtoon_parser_data_flow.svg" alt="Webtoon爬蟲工具數據流程圖">
+            </object>
+        </div>
+        
+        <h2>3. 類圖</h2>
+        <div class="description">
+            <p>類圖展示了系統中的主要類及其關係，包括WebScraper基類、WebtoonScraper類和WebtoonScraperGUI類。</p>
+        </div>
+        <div class="diagram">
+            <object data="webtoon_parser_class_diagram.svg" type="image/svg+xml" width="1000" height="700">
+                <img src="webtoon_parser_class_diagram.svg" alt="Webtoon爬蟲工具類圖">
+            </object>
+        </div>
+        
+        <footer>
+            <p>© 2024 Webtoon爬蟲工具。保留所有權利。</p>
+        </footer>
+    </div>
+</body>
+</html> 
