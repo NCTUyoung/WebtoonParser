@@ -4,7 +4,7 @@
       <!-- 頂部標題欄 -->
       <el-header class="app-header">
         <div class="header-content">
-          <h1>{{ title }} <span class="version">v{{ version }}</span></h1>
+          <h1>Webtoon爬蟲工具 <span class="version">v{{ version }}</span></h1>
         </div>
       </el-header>
 
@@ -117,15 +117,23 @@ const startScraping = async () => {
 
   // 將輸入的 URL 拆分成陣列
   const urlList = urls.value.split('\n').filter(url => url.trim())
+
+  // 開始爬取前立即顯示 loading 狀態
+  urlInputRef.value?.setLoading(true)
+
   try {
-    // 傳入 obj：包含 urls 與 savePath，savePath 從 SavePathSettings 中獲取
+    // 執行 invoke，若成功則代表爬取完成
     await window.electron.invoke('start-scraping', {
       urls: urlList,
       savePath: savePath.value
     })
-    urlInputRef.value?.setLoading(true)
+    // 成功回傳後直接停止 loading 並顯示成功訊息
+    urlInputRef.value?.setLoading(false)
+    ElMessage.success('爬取完成')
   } catch (error: any) {
     console.error('爬取發生錯誤：', error)
+    // 發生錯誤時停止 loading 狀態並顯示錯誤提示
+    urlInputRef.value?.setLoading(false)
     ElMessage.error(`爬取發生錯誤：${error.message}`)
   }
 }

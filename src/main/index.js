@@ -223,4 +223,13 @@ ipcMain.on('save-save-path', (event, path) => {
     console.error('Failed to save path:', error)
     event.reply('log-message', `Failed to save path: ${error.message}`)
   }
+})
+
+// 處理 URL 歷史記錄
+ipcMain.handle('load-url-history', () => {
+  return store.get('url-history', [])
+})
+
+ipcMain.on('save-url-history', (event, history) => {
+  store.set('url-history', history)
 }) 
