@@ -1,794 +1,451 @@
 <template>
   <div class="url-input-container">
-    <div class="history-header">
-      <el-button
-        type="primary"
-        style="min-width: 90px"
-        @click="showHistoryDialog = true"
-      >
-        <el-icon class="mr-1"><List /></el-icon>管理清單
-      </el-button>
-    </div>
-
-    <!-- URL 輸入區 -->
-    <div class="input-area">
-      <el-select
-        v-model="selectedHistory"
-        multiple
-        filterable
-        collapse-tags
-        collapse-tags-tooltip
-        placeholder="從清單中選擇網址"
-        class="history-select"
-        @change="handleHistoryChange"
-      >
-        <el-option
-          v-for="item in urlHistoryWithLabels"
-          :key="item.url"
-          :label="item.label || item.url"
-          :value="item.url"
-        >
-          <div class="url-option">
-            <div class="url-option-label">{{ item.label || '未命名' }}</div>
-            <div class="url-option-url">{{ item.url }}</div>
-          </div>
-        </el-option>
-      </el-select>
-
-      <el-input
-        v-model="inputValue"
-        type="textarea"
-        :rows="5"
-        :maxlength="500"
-        :show-word-limit="true"
-        placeholder="輸入或貼上網址，每行一個"
-        :disabled="loading"
-      />
+    <div class="input-header">
+      <div class="input-title">輸入網址</div>
+      <div class="input-actions">
+        <el-tooltip content="從剪貼簿貼上" placement="top">
+          <el-button
+            @click="pasteFromClipboard"
+            type="primary"
+            class="action-button"
+            :disabled="loading"
+          >
+            <el-icon><DocumentCopy /></el-icon> 貼上
+          </el-button>
+        </el-tooltip>
+        
+        <el-tooltip content="管理網址清單" placement="top">
+          <el-button
+            @click="showUrlHistory"
+            type="primary"
+            class="action-button"
+            :disabled="loading"
+          >
+            <el-icon><Document /></el-icon> 管理
+          </el-button>
+        </el-tooltip>
+      </div>
     </div>
     
-    <div class="url-example" v-if="showExample">
-      <el-alert type="info" :closable="false">
-      <el-alert type="info" :closable="false">
-        <template #default>
-          <el-icon class="mr-1"><InfoFilled /></el-icon>
-          範例: https://www.webtoons.com/zh-hant/bl-gl/friday-night/list?title_no=6875
-        </template>
-      </el-alert>
-    </div>
-
-    <!-- 清單管理對話框 -->
-    <el-dialog
-      v-model="showHistoryDialog"
-      title="管理網址清單"
-      width="80%"
-      :close-on-click-modal="false"
-      destroy-on-close
-      top="5vh"
-      class="url-history-dialog"
-      :show-close="false"
-    >
-      <template #header>
-        <div class="dialog-custom-header">
-          <h3><el-icon><List /></el-icon> 管理網址清單</h3>
-          <el-tooltip content="關閉" placement="top">
-            <el-button
-              @click="showHistoryDialog = false"
-              circle
-              plain
-              class="close-button"
-            >
-              <el-icon><Close /></el-icon>
-            </el-button>
-          </el-tooltip>
-        </div>
-      </template>
-      
-      <div class="dialog-header">
-        <div class="search-container">
-          <el-input
-            v-model="searchKeyword"
-            placeholder="搜尋清單..."
-            class="search-input"
-            clearable
+    <div class="input-area">
+      <!-- 從歷史記錄中選擇網址 -->
+      <div class="url-select-area">
+        <el-select
+          v-model="selectedUrls"
+          multiple
+          filterable
+          placeholder="從歷史記錄中選擇網址..."
+          class="url-select"
+          :disabled="loading"
+          @change="handleUrlSelect"
+        >
+          <el-option
+            v-for="item in urlHistory"
+            :key="item.url"
+            :label="item.label || item.url"
+            :value="item.url"
           >
-            <template #prefix>
-              <el-icon><Search /></el-icon>
-            </template>
-          </el-input>
-          <el-tag type="info" class="ml-2" v-if="searchKeyword">
-            找到 {{ filteredHistory.length }} 項結果
-          </el-tag>
-        </div>
-        <div class="action-buttons">
-          <el-button @click="importFromClipboard" type="success" class="custom-btn success-btn">
-            <el-icon><Document /></el-icon> 從剪貼簿匯入
-          </el-button>
-          <el-button @click="addHistoryItem" type="primary" class="custom-btn primary-btn">
-            <el-icon><Plus /></el-icon> 新增網址
-          </el-button>
-        </div>
-      </div>
-
-      <el-table
-        :data="filteredHistory"
-        style="width: 100%"
-        border
-        stripe
-        highlight-current-row
-        :max-height="tableMaxHeight"
-        v-loading="tableLoading"
-      >
-        <el-table-column label="標籤名稱" width="220">
-          <template #default="{ row }">
-            <el-input
-              v-model="row.label"
-              placeholder="輸入標籤名稱"
-              clearable
-              @change="autoSaveDebounced"
-              class="custom-input"
-            >
-              <template #prefix v-if="!row.label">
-                <el-icon class="text-gray-400"><Edit /></el-icon>
-              </template>
-            </el-input>
-          </template>
-        </el-table-column>
-        <el-table-column label="網址">
-          <template #default="{ row }">
-            <el-input
-              v-model="row.url"
-              placeholder="輸入網址"
-              clearable
-              @change="validateUrl(row)"
-              class="custom-input"
-            >
-              <template #append>
-                <el-tooltip content="在新視窗開啟" placement="top" v-if="isValidUrl(row.url)">
-                  <el-button @click="openUrl(row.url)" class="open-url-btn">
-                    <el-icon><Link /></el-icon>
-                  </el-button>
-                </el-tooltip>
-              </template>
-            </el-input>
-            <div class="url-error" v-if="row.error">{{ row.error }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column width="150" align="center" label="操作">
-          <template #default="{ row, $index }">
-            <div class="action-buttons-cell">
-              <el-tooltip content="自動生成標籤" placement="top">
-                <el-button
-                  type="primary"
-                  size="small"
-                  circle
-                  @click="generateLabel(row)"
-                  :disabled="!isValidUrl(row.url)"
-                  class="generate-label-btn action-btn"
-                >
-                  <el-icon><Refresh /></el-icon>
-                </el-button>
-              </el-tooltip>
-              <el-tooltip content="刪除" placement="top">
-                <el-button
-                  type="danger"
-                  size="small"
-                  circle
-                  @click="confirmRemove($index)"
-                  class="delete-btn action-btn"
-                >
-                  <el-icon><Delete /></el-icon>
-                </el-button>
-              </el-tooltip>
+            <div class="url-option">
+              <span class="url-option-label">{{ item.label || '未命名' }}</span>
+              <span class="url-option-url">{{ item.url }}</span>
             </div>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <div class="empty-placeholder" v-if="filteredHistory.length === 0">
-        <el-empty description="沒有找到網址" :image-size="100">
-          <template #description>
-            <p>{{ searchKeyword ? '沒有符合搜尋條件的網址' : '清單中沒有網址' }}</p>
-          </template>
-          <el-button type="primary" @click="addHistoryItem">新增網址</el-button>
-        </el-empty>
+          </el-option>
+        </el-select>
+        
+        <el-button
+          v-if="selectedUrls.length > 0"
+          @click="addSelectedUrls"
+          type="primary"
+          class="add-selected-btn"
+          :disabled="loading"
+        >
+          <el-icon><Plus /></el-icon> 添加選中網址
+        </el-button>
       </div>
-
-      <div class="dialog-footer">
-        <div class="footer-left">
-          <span class="item-count">共 {{ editableHistory.length }} 項</span>
-          <el-tag 
-            type="success" 
-            v-if="autoSaveStatus === 'saved'"
-            class="ml-2"
-          >
-            <el-icon><Check /></el-icon> 已自動保存
-          </el-tag>
-          <el-tag 
-            type="warning" 
-            v-if="autoSaveStatus === 'saving'"
-            class="ml-2"
-          >
-            <el-icon class="is-loading"><Loading /></el-icon> 保存中...
-          </el-tag>
-        </div>
-        <div class="footer-right">
-          <el-button @click="showHistoryDialog = false" class="custom-btn">關閉</el-button>
-          <el-button type="primary" @click="saveHistory" class="custom-btn primary-btn">
-            <el-icon><Check /></el-icon> 確認並保存
-          </el-button>
-        </div>
-      </div>
-    </el-dialog>
-
-    <!-- 確認刪除對話框 -->
-    <el-dialog
-      v-model="showDeleteConfirm"
-      title="確認刪除"
-      width="400px"
-      :append-to-body="true"
-      destroy-on-close
-      :show-close="false"
-      class="url-history-dialog delete-confirm-dialog"
-    >
-      <template #header>
-        <div class="dialog-custom-header">
-          <h3><el-icon><Warning /></el-icon> 確認刪除</h3>
-          <el-tooltip content="關閉" placement="top">
-            <el-button
-              @click="showDeleteConfirm = false"
-              circle
-              plain
-              class="close-button"
-            >
-              <el-icon><Close /></el-icon>
-            </el-button>
-          </el-tooltip>
-        </div>
-      </template>
       
-      <div class="delete-confirm-content">
-        <el-icon class="warning-icon"><Warning /></el-icon>
-        <p>確定要刪除這個網址嗎？</p>
-        <div v-if="itemToDelete !== null && editableHistory[itemToDelete]" class="delete-item-container">
-          <div class="delete-item-info">
-            <strong>{{ editableHistory[itemToDelete].label || '未命名' }}</strong>
-            <div class="delete-item-url">{{ editableHistory[itemToDelete].url }}</div>
-          </div>
-        </div>
+      <el-input
+        v-model="url"
+        type="textarea"
+        :rows="4"
+        placeholder="請輸入網址，多個網址請換行分隔"
+        clearable
+        class="url-input"
+        :disabled="loading"
+      >
+      </el-input>
+    </div>
+    
+    <div class="input-footer">
+      <div class="url-count" v-if="url">
+        已輸入 {{ getUrlCount() }} 個網址
       </div>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="showDeleteConfirm = false" class="custom-btn">取消</el-button>
-          <el-button type="danger" @click="confirmDeleteItem" class="custom-btn danger-btn">
-            <el-icon><Delete /></el-icon> 確認刪除
+      <div class="action-buttons">
+        <el-tooltip content="在瀏覽器中打開" placement="top" v-if="url">
+          <el-button
+            @click="openInBrowser"
+            class="open-button"
+            :disabled="!url || loading"
+          >
+            <el-icon><Link /></el-icon> 在瀏覽器中打開
           </el-button>
-        </div>
-      </template>
-    </el-dialog>
+        </el-tooltip>
+        
+        <el-button 
+          @click="handleSubmit" 
+          :disabled="!url || loading" 
+          class="submit-btn" 
+          :loading="loading"
+          type="primary"
+        >
+          <el-icon><Download /></el-icon> 開始下載
+        </el-button>
+      </div>
+    </div>
+    
+    <div v-if="error" class="error-message">
+      {{ error }}
+    </div>
+    
+    <!-- URL历史对话框 -->
+    <url-history-dialog
+      v-model="historyDialogVisible"
+      :history="urlHistory"
+      @update:history="updateUrlHistory"
+      @open-url="openExternalUrl"
+      @add-to-input="addUrlToInput"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, computed, nextTick } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { 
-  Plus, 
-  Delete, 
-  Search, 
-  List, 
-  InfoFilled, 
-  Close, 
-  Link, 
-  Edit, 
-  Refresh, 
-  Check, 
-  Loading, 
-  Warning, 
-  Document 
-} from '@element-plus/icons-vue'
-import { debounce } from 'lodash-es'
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Link, Download, DocumentCopy, Document, Plus } from '@element-plus/icons-vue'
+import UrlHistoryDialog from './url-input/UrlHistoryDialog.vue'
+import { isValidUrl, formatUrl, extractUrlsFromText } from '@/utils/urlUtils'
 
+// 定義props
+const props = defineProps({
+  modelValue: {
+    type: String,
+    default: ''
+  },
+  externalSavePath: {
+    type: String,
+    default: ''
+  }
+})
+
+// 定義emit
+const emit = defineEmits(['update:modelValue'])
+
+// 定义接口
 interface HistoryItem {
   url: string
   label: string
   error?: string
 }
 
-const props = defineProps({
-  modelValue: {
-    type: String,
-    default: ''
-  }
-})
-
-const emit = defineEmits(['update:modelValue'])
-
-const inputValue = ref(props.modelValue)
-const loading = ref(false)
-const showExample = ref(true)
+// 状态
+const url = ref(props.modelValue)
+const error = ref('')
 const urlHistory = ref<HistoryItem[]>([])
-const selectedHistory = ref<string[]>([])
-const showHistoryDialog = ref(false)
-const editableHistory = ref<HistoryItem[]>([])
-const searchKeyword = ref('')
-const tableLoading = ref(false)
-const tableMaxHeight = ref('50vh')
-const showDeleteConfirm = ref(false)
-const itemToDelete = ref<number | null>(null)
-const autoSaveStatus = ref<'idle' | 'saving' | 'saved'>('idle')
+const historyDialogVisible = ref(false)
+const loading = ref(false)
+const selectedUrls = ref<string[]>([])
 
-const urlHistoryWithLabels = computed(() => {
-  return urlHistory.value.map(item => ({
-    url: item.url,
-    label: item.label || item.url
-  }))
+// 獲取URL數量
+const getUrlCount = () => {
+  if (!url.value) return 0
+  return url.value.split('\n').filter(line => line.trim()).length
+}
+
+// 設置loading狀態的方法，供外部調用
+const setLoading = (isLoading: boolean) => {
+  loading.value = isLoading
+}
+
+// 暴露方法給父組件
+defineExpose({
+  setLoading
 })
 
-// 從URL中提取顯示名稱的輔助函數
-const getDisplayName = (url: string): string => {
-  try {
-    // 嘗試從URL中提取有意義的部分作為顯示名稱
-    const urlObj = new URL(url)
-    const pathParts = urlObj.pathname.split('/').filter(Boolean)
-    
-    // 如果是漫畫網站的URL
-    if (url.includes('webtoons.com')) {
-      // 提取標題編號
-      if (urlObj.searchParams.has('title_no')) {
-        const titleNo = urlObj.searchParams.get('title_no')
-        
-        // 嘗試提取漫畫類別和名稱
-        let category = ''
-        let title = ''
-        
-        // 從路徑中提取類別和標題
-        if (pathParts.length >= 2) {
-          category = pathParts[1] || '' // 通常是 bl-gl, fantasy 等類別
-          title = pathParts[2] || ''    // 通常是漫畫名稱
-        }
-        
-        if (title) {
-          return `${title} (${category})`
-        } else if (category) {
-          return `${category} (${titleNo})`
-        } else {
-          return `Webtoon #${titleNo}`
-        }
-      }
-    }
-    
-    // 一般情況下返回主機名+最後一個路徑部分
-    const hostname = urlObj.hostname.replace('www.', '')
-    const lastPath = pathParts[pathParts.length - 1] || ''
-    
-    if (lastPath && lastPath !== 'list') {
-      return `${hostname}/${lastPath}`
-    } else {
-      return hostname
-    }
-  } catch (e) {
-    // 如果URL解析失敗，返回原始URL的一部分
-    return url.substring(0, 30) + (url.length > 30 ? '...' : '')
-  }
-}
-
-onMounted(async () => {
-  await loadHistoryData()
-})
-
-const loadHistoryData = async () => {
-  tableLoading.value = true
-  try {
-    const history = await window.electron.invoke('load-url-history')
-    
-    // 處理舊格式的歷史記錄（純字符串數組）
-    if (Array.isArray(history)) {
-      if (history.length > 0 && typeof history[0] === 'string') {
-        // 舊格式：字符串數組，為每個URL生成預設標籤
-        urlHistory.value = history.map(url => ({ 
-          url, 
-          label: getDisplayName(url) // 自動生成標籤
-        }))
-      } else {
-        // 新格式：對象數組
-        urlHistory.value = history || []
-      }
-    } else {
-      urlHistory.value = []
-    }
-    
-    // 確保所有項目都有標籤
-    urlHistory.value = urlHistory.value.map(item => ({
-      url: item.url,
-      label: item.label || getDisplayName(item.url)
-    }))
-    
-    editableHistory.value = JSON.parse(JSON.stringify(urlHistory.value))
-  } catch (error) {
-    console.error('載入歷史記錄時發生錯誤：', error)
-    ElMessage.error('載入清單失敗，請稍後再試')
-  } finally {
-    tableLoading.value = false
-  }
-}
-
-const handleHistoryChange = (values: string[]) => {
-  selectedHistory.value = values
-  inputValue.value = values.join('\n')
-}
-
-const addHistoryItem = () => {
-  const newItem = { url: '', label: '' }
-  editableHistory.value.push(newItem)
-  
-  // 滾動到底部
-  nextTick(() => {
-    const container = document.querySelector('.el-dialog__body')
-    if (container) {
-      container.scrollTop = container.scrollHeight
-    }
-    
-    // 聚焦到新添加的URL輸入框
-    const inputs = document.querySelectorAll('.el-table__body .el-input__inner')
-    const lastInput = inputs[inputs.length - 2] as HTMLInputElement
-    if (lastInput) {
-      lastInput.focus()
-    }
-  })
-}
-
-const confirmRemove = (index: number) => {
-  itemToDelete.value = index
-  showDeleteConfirm.value = true
-}
-
-const confirmDeleteItem = () => {
-  if (itemToDelete.value !== null) {
-    removeHistoryItem(itemToDelete.value)
-    showDeleteConfirm.value = false
-    itemToDelete.value = null
-    autoSaveDebounced()
-  }
-}
-
-const removeHistoryItem = (index: number) => {
-  editableHistory.value.splice(index, 1)
-}
-
-const saveHistory = () => {
-  try {
-    tableLoading.value = true
-    
-    const newHistory = editableHistory.value
-      .filter(item => item.url?.trim())
-      .map(item => ({
-        url: item.url.trim(),
-        label: item.label?.trim() || ''
-      }))
-      // 確保URL唯一性
-      .filter((item, index, self) => 
-        self.findIndex(t => t.url === item.url) === index
-      )
-    
-    urlHistory.value = newHistory
-    editableHistory.value = JSON.parse(JSON.stringify(newHistory))
-    
-    window.electron.send('save-url-history', newHistory)
-    showHistoryDialog.value = false
-    ElMessage.success('清單已保存')
-  } catch (error) {
-    console.error('保存歷史記錄時發生錯誤：', error)
-    ElMessage.error('保存失敗，請稍後再試')
-  } finally {
-    tableLoading.value = false
-  }
-}
-
-// 自動保存功能
-const autoSave = async () => {
-  try {
-    autoSaveStatus.value = 'saving'
-    
-    const newHistory = editableHistory.value
-      .filter(item => item.url?.trim())
-      .map(item => ({
-        url: item.url.trim(),
-        label: item.label?.trim() || ''
-      }))
-      // 確保URL唯一性
-      .filter((item, index, self) => 
-        self.findIndex(t => t.url === item.url) === index
-      )
-    
-    await window.electron.send('save-url-history', newHistory)
-    autoSaveStatus.value = 'saved'
-    
-    // 5秒後重置狀態
-    setTimeout(() => {
-      if (autoSaveStatus.value === 'saved') {
-        autoSaveStatus.value = 'idle'
-      }
-    }, 5000)
-  } catch (error) {
-    console.error('自動保存時發生錯誤：', error)
-    autoSaveStatus.value = 'idle'
-  }
-}
-
-const autoSaveDebounced = debounce(autoSave, 1000)
-
-watch(() => props.modelValue, (newValue) => {
-  inputValue.value = newValue
-})
-
-watch(inputValue, (newValue) => {
+// 監聽url變化，更新modelValue
+watch(url, (newValue) => {
   emit('update:modelValue', newValue)
 })
 
-watch(showHistoryDialog, (newValue) => {
-  if (newValue) {
-    // 對話框打開時，重新載入數據
-    loadHistoryData()
-  }
+// 監聽modelValue變化，更新url
+watch(() => props.modelValue, (newValue) => {
+  url.value = newValue
 })
 
-const setLoading = (value: boolean) => {
-  loading.value = value
+// 处理URL选择变化
+const handleUrlSelect = (values: string[]) => {
+  selectedUrls.value = values
 }
 
-const filteredHistory = computed(() => {
-  if (!searchKeyword.value) return editableHistory.value
+// 添加选中的URL到输入框
+const addSelectedUrls = () => {
+  if (selectedUrls.value.length === 0) return
   
-  const keyword = searchKeyword.value.toLowerCase()
-  return editableHistory.value.filter(item => 
-    item.label?.toLowerCase().includes(keyword) || 
-    item.url?.toLowerCase().includes(keyword)
-  )
-})
-
-// 驗證URL
-const isValidUrl = (url: string): boolean => {
-  if (!url) return false
-  try {
-    new URL(url)
-    return true
-  } catch (e) {
-    return false
-  }
-}
-
-const validateUrl = (row: HistoryItem) => {
-  if (!row.url) {
-    row.error = undefined
+  // 获取当前输入框中的URL
+  const existingUrls = url.value ? url.value.split('\n').filter(line => line.trim()) : []
+  
+  // 过滤掉已存在的URL
+  const newUrls = selectedUrls.value.filter(url => !existingUrls.includes(url))
+  
+  if (newUrls.length === 0) {
+    ElMessage.warning('所選網址已存在於輸入框中')
+    selectedUrls.value = []
     return
   }
   
+  const urlsToAdd = newUrls.join('\n')
+  const urlCount = newUrls.length
+  
+  // 如果输入框为空，直接设置
+  if (!url.value) {
+    url.value = urlsToAdd
+  } else {
+    // 否则添加到现有内容的新行
+    url.value = `${url.value}\n${urlsToAdd}`
+  }
+  
+  // 清空选择
+  selectedUrls.value = []
+  ElMessage.success(`已添加 ${urlCount} 個網址`)
+}
+
+// 从本地存储加载历史记录
+const loadHistory = async () => {
   try {
-    new URL(row.url)
-    row.error = undefined
-    autoSaveDebounced()
+    // 使用IPC從主進程加載歷史記錄
+    const history = await window.electron.invoke('load-url-history')
+    if (history && Array.isArray(history)) {
+      urlHistory.value = history
+    }
   } catch (e) {
-    row.error = '無效的URL格式'
+    console.error('加載歷史記錄失敗', e)
   }
 }
 
-// 自動生成標籤
-const generateLabel = (row: HistoryItem) => {
-  if (isValidUrl(row.url)) {
-    row.label = getDisplayName(row.url)
-    autoSaveDebounced()
+// 保存历史记录到本地存储
+const saveHistory = () => {
+  try {
+    // 創建一個淺拷貝並移除可能導致序列化問題的屬性
+    const historyToSave = urlHistory.value.map(item => ({
+      url: item.url,
+      label: item.label,
+      // 不包含可能導致序列化問題的屬性，如editing、editLabel等
+    }))
+    
+    // 使用IPC將歷史記錄保存到主進程
+    window.electron.send('save-url-history', historyToSave)
+  } catch (e) {
+    console.error('保存歷史記錄失敗', e)
   }
 }
 
-// 從剪貼簿匯入
-const importFromClipboard = async () => {
+// 更新URL历史
+const updateUrlHistory = (newHistory: HistoryItem[]) => {
+  urlHistory.value = newHistory
+  saveHistory()
+}
+
+// 处理提交
+const handleSubmit = async () => {
+  if (!url.value) {
+    error.value = '請輸入網址'
+    return
+  }
+  
+  // 將輸入的URL拆分為數組並過濾空行
+  const urlList = url.value.split('\n').filter(line => line.trim())
+  
+  if (urlList.length === 0) {
+    error.value = '請輸入至少一個有效的網址'
+    return
+  }
+  
+  // 檢查每個URL是否有效
+  const invalidUrls = urlList.filter(u => !isValidUrl(formatUrl(u)))
+  if (invalidUrls.length > 0) {
+    error.value = `存在無效的網址: ${invalidUrls.join(', ')}`
+    return
+  }
+  
+  error.value = ''
+  
+  try {
+    // 使用invoke調用start-scraping方法，傳遞正確的參數格式，包括externalSavePath
+    await window.electron.invoke('start-scraping', {
+      urls: urlList,
+      savePath: props.externalSavePath || null // 使用傳入的externalSavePath或默認保存路徑
+    })
+    ElMessage.success('已開始下載')
+  } catch (error) {
+    console.error('下載請求失敗:', error)
+    ElMessage.error('下載請求失敗')
+  }
+}
+
+// 从剪贴板粘贴
+const pasteFromClipboard = async () => {
   try {
     const text = await navigator.clipboard.readText()
-    if (!text) {
-      ElMessage.warning('剪貼簿中沒有文字內容')
-      return
-    }
-    
-    // 分割多行文字並過濾空行
-    const lines = text.split(/[\r\n]+/).filter(line => line.trim())
-    
-    if (lines.length === 0) {
-      ElMessage.warning('剪貼簿中沒有有效的URL')
-      return
-    }
-    
-    // 檢查是否有有效的URL
-    const validUrls = lines.filter(line => {
-      try {
-        new URL(line.trim())
-        return true
-      } catch (e) {
-        return false
+    if (text) {
+      // 提取剪贴板中的URL
+      const clipboardUrls = extractUrlsFromText(text)
+      
+      if (clipboardUrls.length === 0) {
+        ElMessage.warning('剪貼板中未找到有效網址')
+        return
       }
-    })
-    
-    if (validUrls.length === 0) {
-      ElMessage.warning('剪貼簿中沒有有效的URL')
-      return
-    }
-    
-    // 確認匯入
-    await ElMessageBox.confirm(
-      `從剪貼簿中找到 ${validUrls.length} 個有效URL，是否匯入？`,
-      '確認匯入',
-      {
-        confirmButtonText: '確認',
-        cancelButtonText: '取消',
-        type: 'info'
+      
+      // 获取当前输入框中的URL
+      const existingUrls = url.value ? url.value.split('\n').filter(line => line.trim()) : []
+      
+      // 过滤掉已存在的URL
+      const newUrls = clipboardUrls.filter((clipUrl: string) => !existingUrls.includes(clipUrl))
+      
+      if (newUrls.length === 0) {
+        ElMessage.warning('剪貼板中的網址已存在於輸入框中')
+        return
       }
-    )
-    
-    // 匯入URL
-    validUrls.forEach(url => {
-      // 檢查是否已存在
-      const exists = editableHistory.value.some(item => item.url === url.trim())
-      if (!exists) {
-        editableHistory.value.push({
-          url: url.trim(),
-          label: getDisplayName(url.trim())
-        })
+      
+      const urlsToAdd = newUrls.join('\n')
+      
+      // 如果當前輸入框為空，直接設置
+      if (!url.value) {
+        url.value = urlsToAdd
+      } else {
+        // 否則添加到現有內容的新行
+        url.value = `${url.value}\n${urlsToAdd}`
       }
-    })
-    
-    ElMessage.success(`成功匯入 ${validUrls.length} 個URL`)
-    autoSaveDebounced()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('從剪貼簿匯入時發生錯誤：', error)
-      ElMessage.error('匯入失敗，請稍後再試')
+      
+      ElMessage.success(`已從剪貼板添加 ${newUrls.length} 個網址`)
+      error.value = ''
     }
+  } catch (e) {
+    ElMessage.error('無法讀取剪貼板內容')
   }
 }
 
-// 在新視窗開啟URL
-const openUrl = (url: string) => {
-  if (isValidUrl(url)) {
-    window.electron.send('open-external-url', url)
+// 显示URL历史对话框
+const showUrlHistory = () => {
+  historyDialogVisible.value = true
+}
+
+// 在浏览器中打开URL
+const openInBrowser = () => {
+  if (!url.value) return
+  
+  // 獲取第一個非空URL
+  const firstUrl = url.value.split('\n').find(line => line.trim())
+  if (!firstUrl) {
+    error.value = '請輸入有效的網址'
+    return
+  }
+  
+  const formattedUrl = formatUrl(firstUrl)
+  
+  if (isValidUrl(formattedUrl)) {
+    openExternalUrl(formattedUrl)
+    error.value = ''
+  } else {
+    error.value = '請輸入有效的網址'
   }
 }
 
-defineExpose({
-  setLoading
+// 从历史记录中添加URL到输入框
+const addUrlToInput = (urlToAdd: string) => {
+  // 检查URL是否已存在于输入框中
+  const existingUrls = url.value ? url.value.split('\n').filter(line => line.trim()) : []
+  
+  // 如果URL已存在，显示提示并返回
+  if (existingUrls.includes(urlToAdd)) {
+    ElMessage.warning('該網址已存在於輸入框中')
+    return
+  }
+  
+  // 如果输入框为空，直接设置
+  if (!url.value) {
+    url.value = urlToAdd
+  } else {
+    // 否则添加到现有内容的新行
+    url.value = `${url.value}\n${urlToAdd}`
+  }
+  
+  ElMessage.success('已添加到輸入框')
+}
+
+// 在外部浏览器中打开URL
+const openExternalUrl = (url: string) => {
+  window.electron.send('open-external-url', url)
+}
+
+// 组件挂载时加载历史记录
+onMounted(() => {
+  loadHistory()
+  
+  // 添加事件監聽器，用於接收主進程的消息
+  window.electron.on('log-message', (message) => {
+    console.log('來自主進程的消息:', message)
+  })
+})
+
+// 組件卸載時清理事件監聽器
+onUnmounted(() => {
+  window.electron.removeAllListeners('log-message')
 })
 </script>
 
 <style scoped>
+/* 基础布局 */
 .url-input-container {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.history-header {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-.input-area {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.history-select {
   width: 100%;
-}
-
-.history-header {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-.input-area {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.history-select {
-  width: 100%;
-}
-
-.url-example {
-  margin-top: 4px;
-}
-
-:deep(.el-textarea__inner) {
-  font-family: monospace;
-  font-size: 14px;
-}
-
-:deep(.el-alert) {
-  margin: 0;
-  padding: 8px 16px;
-}
-
-:deep(.el-select) {
-  width: 100%;
-}
-
-:deep(.el-table .el-input) {
-  width: 100%;
-}
-
-:deep(.el-dialog__body) {
-  padding: 20px;
-  max-height: 70vh;
-  overflow-y: auto;
-}
-
-:deep(.el-table) {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0;
   border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  background-color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-:deep(.el-table__header-wrapper th) {
-  background-color: #f0f7ff;
-  font-weight: bold;
-  color: #2c3e50;
-  padding: 12px 0;
-}
-
-:deep(.el-table__row) {
-  transition: background-color 0.3s ease;
-}
-
-.dialog-footer {
+.input-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid #ebeef5;
+  padding: 12px 16px;
+  border-bottom: 1px solid #ebeef5;
 }
 
-.dialog-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  gap: 12px;
-  flex-wrap: wrap;
+.input-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #303133;
 }
 
-.search-container {
-  display: flex;
-  align-items: center;
-  flex: 1;
-}
-
-.search-input {
-  max-width: 300px;
-}
-
-.action-buttons {
+.input-actions {
   display: flex;
   gap: 8px;
 }
 
-.item-count {
-  color: #909399;
-  font-size: 14px;
+.input-area {
+  padding: 16px;
 }
 
-:deep(.el-button [class*="el-icon"] + span) {
-  margin-left: 4px;
+/* URL選擇區域 */
+.url-select-area {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  align-items: flex-start;
 }
 
-:deep(.el-table--striped .el-table__body tr.el-table__row--striped td) {
-  background-color: #fafafa;
-}
-
-:deep(.el-table__body tr:hover > td) {
-  background-color: #ecf5ff !important;
+.url-select {
+  flex: 1;
 }
 
 .url-option {
@@ -798,7 +455,8 @@ defineExpose({
 }
 
 .url-option-label {
-  font-weight: bold;
+  font-weight: 500;
+  color: #303133;
 }
 
 .url-option-url {
@@ -809,304 +467,140 @@ defineExpose({
   text-overflow: ellipsis;
 }
 
-.url-error {
-  color: #f56c6c;
-  font-size: 12px;
-  margin-top: 4px;
+.add-selected-btn {
+  white-space: nowrap;
 }
 
-.action-buttons-cell {
+.url-input {
+  width: 100%;
+}
+
+.input-footer {
   display: flex;
-  justify-content: center;
-  gap: 12px;
-}
-
-.action-btn {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-}
-
-.action-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-.generate-label-btn {
-  background-color: #409eff;
-  border-color: #409eff;
-  color: white;
-  opacity: 0.9;
-}
-
-.generate-label-btn:hover:not(:disabled) {
-  opacity: 1;
-  background-color: #66b1ff;
-  border-color: #66b1ff;
-}
-
-.generate-label-btn:disabled {
-  background-color: #a0cfff;
-  border-color: #a0cfff;
-  color: white;
-  opacity: 0.7;
-  box-shadow: none;
-  cursor: not-allowed;
-}
-
-.delete-btn {
-  background-color: #f56c6c;
-  border-color: #f56c6c;
-  color: white;
-  opacity: 0.9;
-}
-
-.delete-btn:hover {
-  opacity: 1;
-  background-color: #f78989;
-  border-color: #f78989;
-}
-
-.dialog-custom-header {
-  display: flex;
-  align-items: center;
   justify-content: space-between;
-  width: 100%;
-  padding: 16px 20px;
-  background-color: #f5f7fa;
-  border-bottom: 1px solid #e4e7ed;
-  border-radius: 0;
-  margin: 0;
-  box-sizing: border-box;
-}
-
-.dialog-custom-header h3 {
-  display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0;
-  font-size: 18px;
-  color: #303133;
+  padding: 12px 16px;
+  border-top: 1px solid #ebeef5;
 }
 
-.close-button {
-  margin-left: auto;
-}
-
-.empty-placeholder {
-  padding: 40px 0;
-}
-
-.delete-confirm-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  padding: 16px 0;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.warning-icon {
-  font-size: 48px;
-  color: #e6a23c;
-}
-
-.delete-item-container {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0 10px;
-}
-
-.delete-item-info {
-  background-color: #f8f8f8;
-  border-radius: 8px;
-  padding: 16px;
-  width: 100%;
-  max-width: 100%;
-  text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  box-sizing: border-box;
-  overflow: hidden;
-  word-wrap: break-word;
-}
-
-.delete-item-url {
-  font-size: 12px;
+.url-count {
+  font-size: 14px;
   color: #606266;
-  margin-top: 8px;
-  word-break: break-all;
 }
 
-.footer-left, .footer-right {
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.submit-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  padding: 0 20px;
+  font-weight: 500;
+  height: 40px;
 }
 
-.mr-1 {
-  margin-right: 4px;
+.open-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.ml-2 {
-  margin-left: 8px;
-}
-
-:deep(.url-history-dialog:not(.delete-confirm-dialog) .el-dialog__body) {
-  padding: 20px;
-  max-height: 70vh;
-  overflow-y: auto;
-}
-
-:deep(.url-history-dialog .el-dialog__header) {
-  padding: 0;
-  margin: 0;
-  border-radius: 8px 8px 0 0;
-  overflow: hidden;
-}
-
-:deep(.url-history-dialog .el-dialog) {
+/* 输入框样式 */
+:deep(.url-input .el-textarea__inner) {
   border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 0 0 1px #dcdfe6 inset;
+  transition: all 0.3s ease;
+  min-height: 120px;
+  resize: vertical;
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-:deep(.delete-confirm-dialog .el-dialog__header) {
-  padding: 0;
-  margin: 0;
-  border-radius: 8px 8px 0 0;
-  overflow: hidden;
+:deep(.url-input .el-textarea__inner:hover) {
+  box-shadow: 0 0 0 1px #a0cfff inset;
 }
 
-:deep(.delete-confirm-dialog .el-dialog) {
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+:deep(.url-input .el-textarea__inner:focus) {
+  box-shadow: 0 0 0 1px #409eff inset, 0 0 0 3px rgba(64, 158, 255, 0.1);
 }
 
-:deep(.delete-confirm-dialog .el-dialog__body) {
-  padding: 20px;
-  overflow: hidden;
-  box-sizing: border-box;
+/* Select 選擇器樣式 */
+:deep(.url-select .el-select__wrapper) {
   width: 100%;
 }
 
-:deep(.delete-confirm-dialog .el-dialog__footer) {
-  padding: 10px 20px 20px;
-  box-sizing: border-box;
+:deep(.url-select .el-select__tags) {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
+  padding-right: 30px;
 }
 
-:deep(.is-loading) {
-  animation: rotating 2s linear infinite;
+:deep(.url-select .el-select__tags-text) {
+  display: inline-block;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-@keyframes rotating {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-:deep(.el-input__inner) {
+/* 操作按钮样式 */
+.action-button {
   transition: all 0.3s ease;
 }
 
-:deep(.el-input__inner:focus) {
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
-}
-
-:deep(.el-button) {
-  transition: all 0.3s ease;
-}
-
-:deep(.el-tag) {
-  border-radius: 4px;
-}
-
-.custom-btn {
-  border-radius: 6px;
-  padding: 8px 16px;
-  font-weight: 500;
-  transition: all 0.3s ease;
-}
-
-.custom-btn:hover {
-  transform: translateY(-1px);
+.action-button:hover:not(:disabled) {
+  transform: translateY(-2px);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
-.primary-btn {
-  background-color: #409eff;
-  border-color: #409eff;
-}
-
-.primary-btn:hover {
-  background-color: #66b1ff;
-  border-color: #66b1ff;
-}
-
-.success-btn {
-  background-color: #67c23a;
-  border-color: #67c23a;
-}
-
-.success-btn:hover {
-  background-color: #85ce61;
-  border-color: #85ce61;
-}
-
-.danger-btn {
-  background-color: #f56c6c;
-  border-color: #f56c6c;
-}
-
-.danger-btn:hover {
-  background-color: #f78989;
-  border-color: #f78989;
-}
-
-.custom-input {
-  --el-input-hover-border-color: #a0cfff;
-  --el-input-focus-border-color: #409eff;
-}
-
-:deep(.custom-input .el-input__wrapper) {
-  border-radius: 6px;
-  transition: all 0.3s ease;
-  box-shadow: 0 0 0 1px #dcdfe6 inset;
-}
-
-:deep(.custom-input .el-input__wrapper:hover) {
-  box-shadow: 0 0 0 1px var(--el-input-hover-border-color) inset;
-}
-
-:deep(.custom-input .el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 1px var(--el-input-focus-border-color) inset, 0 0 0 3px rgba(64, 158, 255, 0.1);
-}
-
-:deep(.custom-input .el-input__inner) {
-  height: 36px;
+/* 错误消息样式 */
+.error-message {
+  color: #f56c6c;
   font-size: 14px;
+  margin-top: 8px;
+  padding: 8px 16px;
+  background-color: #fef0f0;
+  border-radius: 4px;
+  border-left: 3px solid #f56c6c;
+}
+</style>
+
+<style>
+/* 全局样式 */
+.el-message {
+  min-width: 300px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-:deep(.custom-input .el-input-group__append) {
-  padding: 0;
-  border-top-right-radius: 6px;
-  border-bottom-right-radius: 6px;
-  overflow: hidden;
+.el-message__content {
+  font-size: 14px;
+  font-weight: 500;
 }
 
-.open-url-btn {
-  height: 36px;
-  border: none;
-  border-radius: 0;
-  color: #409eff;
-  transition: all 0.3s ease;
+.el-message--success {
+  background-color: #f0f9eb;
+  border-color: #e1f3d8;
 }
 
-.open-url-btn:hover {
-  background-color: #ecf5ff;
-  color: #66b1ff;
+.el-message--error {
+  background-color: #fef0f0;
+  border-color: #fde2e2;
+}
+
+.el-message--warning {
+  background-color: #fdf6ec;
+  border-color: #faecd8;
+}
+
+.el-message--info {
+  background-color: #edf2fc;
+  border-color: #ebeef5;
 }
 </style> 

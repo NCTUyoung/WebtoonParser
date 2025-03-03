@@ -19,7 +19,7 @@
               </el-button>
             </div>
           </template>
-          <UrlInput ref="urlInputRef" v-model="urls" />
+          <UrlInput ref="urlInputRef" v-model="urls" :external-save-path="savePath" />
         </el-card>
 
         <!-- 定時設置區域 -->
@@ -51,7 +51,7 @@
           <template #header>
             <div class="card-header">
               <h2>執行日誌</h2>
-              <el-button type="info" plain @click="clearLogs">
+              <el-button type="info" @click="clearLogs">
                 清空日誌
               </el-button>
             </div>

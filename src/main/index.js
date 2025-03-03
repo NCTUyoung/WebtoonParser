@@ -64,9 +64,23 @@ app.on('activate', () => {
 // 處理爬蟲請求
 ipcMain.handle('start-scraping', async (event, args) => {
   try {
-    // 從傳入的 args 中獲取 urls 與 savePath
-    const urlList = Array.isArray(args.urls) ? args.urls : [args.urls]
-    const externalSavePath = args.savePath
+    // 處理不同格式的輸入參數
+    let urlList = [];
+    let externalSavePath = null;
+    
+    // 如果args是字符串，則視為單個URL
+    if (typeof args === 'string') {
+      urlList = [args];
+    } 
+    // 如果args是對象，則從中提取urls和savePath
+    else if (typeof args === 'object' && args !== null) {
+      urlList = Array.isArray(args.urls) ? args.urls : (args.urls ? [args.urls] : []);
+      externalSavePath = args.savePath || null;
+    }
+    
+    if (urlList.length === 0) {
+      throw new Error('No valid URLs provided');
+    }
 
     // 依序處理每個 URL
     for (const url of urlList) {
