@@ -48,6 +48,7 @@
     
     <div class="url-example" v-if="showExample">
       <el-alert type="info" :closable="false">
+      <el-alert type="info" :closable="false">
         <template #default>
           <el-icon class="mr-1"><InfoFilled /></el-icon>
           範例: https://www.webtoons.com/zh-hant/bl-gl/friday-night/list?title_no=6875
@@ -661,6 +662,22 @@ defineExpose({
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.history-header {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.input-area {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.history-select {
+  width: 100%;
 }
 
 .history-header {
