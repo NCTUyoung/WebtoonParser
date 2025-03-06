@@ -326,13 +326,38 @@ watch(() => props.data, () => {
   gap: 8px;
 }
 
-.action-button {
-  transition: all 0.3s;
+/* 统一按钮样式 */
+:deep(.el-button.action-button) {
+  height: 32px;
+  width: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  border-color: #e4e7ed;
 }
 
-.action-button:hover {
+:deep(.el-button.action-button:hover) {
   transform: translateY(-2px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-color: #c0c4cc;
+}
+
+:deep(.el-button.action-button .el-icon) {
+  font-size: 14px;
+}
+
+:deep(.el-button.action-button.el-button--danger) {
+  background-color: #fff;
+  border-color: #e4e7ed;
+  color: #f56c6c;
+}
+
+:deep(.el-button.action-button.el-button--danger:hover) {
+  background-color: #fef0f0;
+  border-color: #f56c6c;
+  color: #f56c6c;
 }
 
 /* 表格样式覆盖 */

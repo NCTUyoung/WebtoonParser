@@ -89,4 +89,29 @@ out/
 
 # Cache
 .eslintcache
-.stylelintcache 
+.stylelintcache
+
+# Playwright 测试相关
+test-results/
+playwright-report/
+playwright/.cache/
+.auth/
+/blob-report/
+/playwright/.auth/
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
+# 临时文件
+tmp/
+temp/
+*.tmp
+
+# 测试截图
+*.screenshot.png
+external-screenshot.png
+
+# 测试生成的文件
+webtoon_stats_*.xlsx
+webtoon_test_*.xlsx
+webtoon_excel_test_*.xlsx 

@@ -502,17 +502,47 @@ watch(() => props.history, (newHistory) => {
   margin-top: 4px;
 }
 
-/* 按钮样式 */
+/* 统一按钮样式 */
 .custom-btn {
-  border-radius: 6px;
-  padding: 8px 16px;
+  border-radius: 8px;
   font-weight: 500;
   transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px;
 }
 
 .custom-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.custom-btn.el-button--primary {
+  background-color: var(--primary-color);
+  border-color: transparent;
+}
+
+.custom-btn.el-button--primary:hover {
+  background-color: var(--primary-light);
+  box-shadow: 0 4px 12px rgba(43, 133, 228, 0.25);
+}
+
+.close-button {
+  height: 32px;
+  width: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.close-button:hover {
+  background-color: #f2f6fc;
+  color: var(--primary-color);
 }
 
 /* Element Plus 组件样式覆盖 */

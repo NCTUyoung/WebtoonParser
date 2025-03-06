@@ -14,9 +14,6 @@
           <template #header>
             <div class="card-header">
               <h2>Webtoon 網址</h2>
-              <el-button type="primary" @click="startScraping">
-                立即爬取
-              </el-button>
             </div>
           </template>
           <UrlInput ref="urlInputRef" v-model="urls" :external-save-path="savePath" />
@@ -256,23 +253,55 @@ onUnmounted(() => {
 <style>
 /* 全局樣式 */
 :root {
-  --primary-color: #409EFF;
-  --header-bg: #1e88e5;
-  --card-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  --primary-color: #2b85e4;
+  --primary-light: #5cadff;
+  --primary-dark: #1c5cad;
+  --success-color: #19be6b;
+  --warning-color: #ff9900;
+  --error-color: #ed4014;
+  --text-primary: #17233d;
+  --text-regular: #515a6e;
+  --text-secondary: #808695;
+  --border-color: #dcdee2;
+  --border-light: #e8eaec;
+  --bg-color: #f8f8f9;
+  --card-bg: #ffffff;
+  --header-bg: #2b85e4;
+  --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
 /* 容器樣式 */
 .app-container {
   min-height: 100vh;
   background-color: #f5f7fa;
+  background-image: 
+    linear-gradient(135deg, rgba(43, 133, 228, 0.05) 0%, rgba(235, 245, 255, 0.7) 100%),
+    radial-gradient(circle at 15% 85%, rgba(255, 153, 0, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 85% 15%, rgba(25, 190, 107, 0.05) 0%, transparent 50%);
+  background-attachment: fixed;
+  position: relative;
+}
+
+.app-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%232b85e4' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* 頂部標題欄 */
 .app-header {
-  background: var(--header-bg);
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
   color: white;
   padding: 0 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  position: relative;
+  z-index: 10;
 }
 
 .header-content {
@@ -285,31 +314,53 @@ onUnmounted(() => {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 500;
+  display: flex;
+  align-items: center;
 }
 
 .version {
   font-size: 0.9rem;
   opacity: 0.8;
   margin-left: 8px;
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 2px 8px;
+  border-radius: 12px;
 }
 
 /* 主要內容區域 */
 .main-content {
-  padding: 20px;
+  padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
+  background-color: rgba(248, 248, 249, 0.85);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  position: relative;
+  z-index: 1;
 }
 
 /* 卡片樣式 */
 .section-card {
-  margin-bottom: 20px;
-  border-radius: 8px;
-  box-shadow: var(--card-shadow);
+  margin-bottom: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  border: none;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(5px);
+}
+
+.section-card:hover {
+  box-shadow: 0 8px 24px rgba(43, 133, 228, 0.12);
+  transform: translateY(-2px);
 }
 
 .section-card .el-card__header {
-  padding: 15px 20px;
-  border-bottom: 1px solid #ebeef5;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-light);
+  background: linear-gradient(to right, #fafafa, #f5f7fa);
 }
 
 .card-header {
@@ -322,7 +373,10 @@ onUnmounted(() => {
   margin: 0;
   font-size: 1.2rem;
   font-weight: 500;
-  color: #303133;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* 日誌卡片特殊樣式 */
@@ -337,18 +391,151 @@ onUnmounted(() => {
 .app-footer {
   text-align: center;
   padding: 20px;
-  color: #909399;
+  color: #808695;
   font-size: 0.9rem;
+  background-color: rgba(248, 249, 251, 0.8);
+  backdrop-filter: blur(5px);
+  border-top: 1px solid rgba(232, 234, 236, 0.5);
+  margin-top: auto;
+  position: relative;
+  z-index: 1;
+}
+
+.app-footer p {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.app-footer p::before,
+.app-footer p::after {
+  content: "";
+  display: block;
+  height: 1px;
+  width: 30px;
+  background-color: #dcdee2;
 }
 
 /* 響應式設計 */
 @media (max-width: 768px) {
   .main-content {
-    padding: 10px;
+    padding: 16px;
   }
   
   .header-content h1 {
     font-size: 1.2rem;
   }
+  
+  .section-card {
+    margin-bottom: 16px;
+  }
+  
+  .card-header h2 {
+    font-size: 1rem;
+  }
+  
+  .app-footer {
+    padding: 16px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .main-content {
+    padding: 12px;
+  }
+  
+  .section-card .el-card__header {
+    padding: 12px 16px;
+  }
+  
+  .section-card .el-card__body {
+    padding: 12px;
+  }
+}
+
+/* 统一按钮样式 */
+:deep(.el-button) {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+:deep(.el-button:hover:not(:disabled)) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+:deep(.el-button:active) {
+  transform: translateY(0);
+}
+
+:deep(.el-button .el-icon) {
+  font-size: 16px;
+}
+
+/* 主要按钮样式 */
+:deep(.el-button--primary) {
+  background-color: var(--primary-color);
+  border-color: transparent;
+  height: 40px;
+  padding: 0 16px;
+}
+
+:deep(.el-button--primary:hover:not(:disabled)) {
+  background-color: var(--primary-light);
+  box-shadow: 0 4px 12px rgba(43, 133, 228, 0.25);
+}
+
+/* 次要按钮样式 */
+:deep(.el-button--default) {
+  border-color: #dcdee2;
+  color: var(--text-regular);
+  height: 36px;
+}
+
+:deep(.el-button--default:hover:not(:disabled)) {
+  border-color: var(--primary-light);
+  color: var(--primary-color);
+}
+
+/* 信息按钮样式 */
+:deep(.el-button--info) {
+  background-color: #909399;
+  border-color: transparent;
+  color: #fff;
+  height: 36px;
+}
+
+:deep(.el-button--info:hover:not(:disabled)) {
+  background-color: #a6a9ad;
+  box-shadow: 0 4px 12px rgba(144, 147, 153, 0.25);
+}
+
+/* 卡片头部按钮样式 */
+.card-header .el-button {
+  padding: 8px 14px;
+  font-size: 14px;
+}
+
+/* 禁用状态样式 */
+:deep(.el-button:disabled) {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #f5f7fa;
+  border-color: #e4e7ed;
+  color: #c0c4cc;
+}
+
+:deep(.el-button--primary:disabled) {
+  background-color: #a0cfff;
+  border-color: transparent;
+  color: #fff;
 }
 </style> 

@@ -9,6 +9,7 @@ let scheduleJobs = new Map()
 const store = new Store()
 
 const isDev = process.env.NODE_ENV === 'development'
+const isTest = process.env.NODE_ENV === 'test'
 
 process.env.LANG = 'zh_TW.UTF-8';
 
@@ -82,6 +83,11 @@ ipcMain.handle('start-scraping', async (event, args) => {
       throw new Error('No valid URLs provided');
     }
 
+    // 在测试模式下，使用环境变量中的临时下载路径
+    if (isTest && process.env.TEMP_DOWNLOAD_PATH) {
+      externalSavePath = process.env.TEMP_DOWNLOAD_PATH;
+    }
+
     // 依序處理每個 URL
     for (const url of urlList) {
       console.log('Starting to scrape URL:', url)
@@ -142,8 +148,13 @@ ipcMain.on('start-schedule', (event, settings) => {
   console.log('now.getDay():', now.getDay(), ' rule.dayOfWeek:', rule.dayOfWeek);
 
   // 如果設定的是今天且已經過了，立即觸發一次
-  if (now.getDay() === rule.dayOfWeek && now > scheduledTime) {
-    event.reply('log-message', 'Past the set time, executing once immediately');
+  // 或者在测试模式下且设置了立即触发，也立即触发一次
+  const shouldTriggerImmediately = 
+    (now.getDay() === rule.dayOfWeek && now > scheduledTime) || 
+    (isTest && process.env.IMMEDIATE_TRIGGER === 'true');
+  
+  if (shouldTriggerImmediately) {
+    event.reply('log-message', 'Past the set time or in test mode, executing once immediately');
     // 立即觸發一次，再設定定時任務
     mainWindow.webContents.send('schedule-trigger');
   } else {
@@ -217,6 +228,11 @@ ipcMain.handle('select-directory', async () => {
 })
 
 ipcMain.handle('load-save-path', () => {
+  // 在测试模式下，使用环境变量中的临时下载路径
+  if (isTest && process.env.TEMP_DOWNLOAD_PATH) {
+    return process.env.TEMP_DOWNLOAD_PATH;
+  }
+  
   try {
     const savedPath = store.get('save-path')
     console.log('Loaded save path:', savedPath)

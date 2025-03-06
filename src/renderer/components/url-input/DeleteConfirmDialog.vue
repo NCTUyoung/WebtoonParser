@@ -161,27 +161,49 @@ const confirmDelete = () => {
   word-break: break-all;
 }
 
-/* 按钮样式 */
+/* 统一按钮样式 */
 .custom-btn {
-  border-radius: 6px;
-  padding: 8px 16px;
+  border-radius: 8px;
   font-weight: 500;
   transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px;
 }
 
 .custom-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .danger-btn {
   background-color: #f56c6c;
-  border-color: #f56c6c;
+  border-color: transparent;
+  color: #fff;
 }
 
 .danger-btn:hover {
   background-color: #f78989;
-  border-color: #f78989;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(245, 108, 108, 0.25);
+}
+
+.close-button {
+  height: 32px;
+  width: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.close-button:hover {
+  background-color: #f2f6fc;
+  color: var(--primary-color);
 }
 
 /* 对话框内容区域样式 */

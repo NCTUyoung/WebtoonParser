@@ -37,7 +37,6 @@
           placeholder="從歷史記錄中選擇網址..."
           class="url-select"
           :disabled="loading"
-          @change="handleUrlSelect"
         >
           <el-option
             v-for="item in urlHistory"
@@ -59,7 +58,7 @@
           class="add-selected-btn"
           :disabled="loading"
         >
-          <el-icon><Plus /></el-icon> 添加選中網址
+          <el-icon><Plus /></el-icon> 添加選中 ({{ selectedUrls.length }})
         </el-button>
       </div>
       
@@ -405,26 +404,32 @@ onUnmounted(() => {
 /* 基础布局 */
 .url-input-container {
   width: 100%;
-  max-width: 800px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 0;
-  border-radius: 8px;
+  border-radius: 12px;
   background-color: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
 .input-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
+  padding: 14px 18px;
   border-bottom: 1px solid #ebeef5;
+  background-color: #fafafa;
 }
 
 .input-title {
   font-size: 16px;
   font-weight: 500;
-  color: #303133;
+  color: #17233d;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .input-actions {
@@ -433,15 +438,27 @@ onUnmounted(() => {
 }
 
 .input-area {
-  padding: 16px;
+  padding: 20px;
+  background-color: #fff;
 }
 
 /* URL選擇區域 */
 .url-select-area {
   display: flex;
   gap: 12px;
-  margin-bottom: 12px;
-  align-items: flex-start;
+  margin-bottom: 20px;
+  align-items: center;
+  background-color: #f8f9fb;
+  border-radius: 10px;
+  padding: 16px;
+  border: 1px solid #ebeef5;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.url-select-area:hover {
+  border-color: #c0c4cc;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .url-select {
@@ -451,24 +468,28 @@ onUnmounted(() => {
 .url-option {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  padding: 6px 0;
 }
 
 .url-option-label {
   font-weight: 500;
-  color: #303133;
+  color: #17233d;
 }
 
 .url-option-url {
   font-size: 12px;
-  color: #909399;
+  color: #808695;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .add-selected-btn {
-  white-space: nowrap;
+  padding: 10px 16px;
+  height: 40px;
+  font-size: 14px;
+  background-color: var(--primary-color);
 }
 
 .url-input {
@@ -479,13 +500,15 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
+  padding: 16px 20px;
   border-top: 1px solid #ebeef5;
+  background-color: #fafafa;
 }
 
 .url-count {
   font-size: 14px;
-  color: #606266;
+  color: #515a6e;
+  font-weight: 500;
 }
 
 .action-buttons {
@@ -495,38 +518,275 @@ onUnmounted(() => {
 }
 
 .submit-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
   padding: 0 20px;
-  font-weight: 500;
   height: 40px;
+  font-size: 15px;
+  background-color: var(--primary-color);
+  font-weight: 600;
 }
 
 .open-button {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  padding: 0 16px;
+  height: 40px;
+  font-size: 14px;
+  border-color: #dcdee2;
 }
 
-/* 输入框样式 */
-:deep(.url-input .el-textarea__inner) {
-  border-radius: 8px;
-  box-shadow: 0 0 0 1px #dcdfe6 inset;
-  transition: all 0.3s ease;
-  min-height: 120px;
-  resize: vertical;
-  font-family: monospace;
+/* 错误消息样式 */
+.error-message {
+  color: #ed4014;
   font-size: 14px;
+  margin-top: 12px;
+  padding: 12px 16px;
+  background-color: #ffece6;
+  border-radius: 8px;
+  border-left: 3px solid #ed4014;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.error-message::before {
+  content: "⚠️";
+  font-size: 16px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .url-select-area {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px;
+  }
+  
+  .add-selected-btn {
+    width: 100%;
+  }
+  
+  .input-footer {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .open-button, 
+  .submit-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 576px) {
+  .input-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .input-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .action-button {
+    flex: 1;
+  }
+}
+</style>
+
+<style>
+/* 全局样式 */
+.el-message {
+  min-width: 320px;
+  border-radius: 10px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  padding: 14px 20px;
+  border: none;
+}
+
+.el-message__content {
+  font-size: 14px;
+  font-weight: 500;
   line-height: 1.5;
 }
 
+.el-message__icon {
+  margin-right: 10px;
+  font-size: 18px;
+}
+
+.el-message--success {
+  background-color: #edfff3;
+  border-left: 4px solid #19be6b;
+}
+
+.el-message--error {
+  background-color: #ffece6;
+  border-left: 4px solid #ed4014;
+}
+
+.el-message--warning {
+  background-color: #fff9e6;
+  border-left: 4px solid #ff9900;
+}
+
+.el-message--info {
+  background-color: #f0f7ff;
+  border-left: 4px solid #2b85e4;
+}
+</style>
+
+<style>
+/* 统一按钮样式 */
+/* 基础按钮样式 */
+:deep(.el-button) {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-color: transparent;
+}
+
+:deep(.el-button:hover:not(:disabled)) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+:deep(.el-button:active) {
+  transform: translateY(0);
+}
+
+:deep(.el-button .el-icon) {
+  font-size: 16px;
+}
+
+/* 主要按钮样式 */
+:deep(.el-button--primary) {
+  background-color: var(--primary-color);
+  border-color: transparent;
+}
+
+:deep(.el-button--primary:hover:not(:disabled)) {
+  background-color: var(--primary-light);
+  box-shadow: 0 4px 12px rgba(43, 133, 228, 0.25);
+}
+
+/* 次要按钮样式 */
+:deep(.el-button--default) {
+  border-color: #dcdee2;
+  color: var(--text-regular);
+}
+
+:deep(.el-button--default:hover:not(:disabled)) {
+  border-color: var(--primary-light);
+  color: var(--primary-color);
+}
+
+/* 按钮大小层级 */
+.action-button {
+  padding: 8px 14px;
+  height: 36px;
+  font-size: 14px;
+}
+
+.add-selected-btn {
+  padding: 10px 16px;
+  height: 40px;
+  font-size: 14px;
+  background-color: var(--primary-color);
+}
+
+.open-button {
+  padding: 0 16px;
+  height: 40px;
+  font-size: 14px;
+  border-color: #dcdee2;
+}
+
+.submit-btn {
+  padding: 0 20px;
+  height: 40px;
+  font-size: 15px;
+  background-color: var(--primary-color);
+  font-weight: 600;
+}
+
+/* 按钮图标样式 */
+.submit-btn .el-icon {
+  font-size: 16px;
+}
+
+.add-selected-btn .el-icon {
+  font-size: 16px;
+}
+
+.action-button .el-icon {
+  font-size: 14px;
+}
+
+/* 按钮容器样式 */
+.input-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* 禁用状态样式 */
+:deep(.el-button:disabled) {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #f5f7fa;
+  border-color: #e4e7ed;
+  color: #c0c4cc;
+}
+
+:deep(.el-button--primary:disabled) {
+  background-color: #a0cfff;
+  border-color: transparent;
+  color: #fff;
+}
+
+/* 按钮焦点状态 */
+:deep(.el-button:focus) {
+  outline: none;
+}
+</style>
+
+<style>
+/* 输入框样式 */
+:deep(.url-input .el-textarea__inner) {
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px #dcdee2 inset;
+  transition: all 0.3s ease;
+  min-height: 140px;
+  resize: vertical;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 16px;
+  color: #17233d;
+}
+
 :deep(.url-input .el-textarea__inner:hover) {
-  box-shadow: 0 0 0 1px #a0cfff inset;
+  box-shadow: 0 0 0 1px #5cadff inset;
 }
 
 :deep(.url-input .el-textarea__inner:focus) {
-  box-shadow: 0 0 0 1px #409eff inset, 0 0 0 3px rgba(64, 158, 255, 0.1);
+  box-shadow: 0 0 0 1px #2b85e4 inset, 0 0 0 3px rgba(43, 133, 228, 0.1);
 }
 
 /* Select 選擇器樣式 */
@@ -539,68 +799,73 @@ onUnmounted(() => {
   overflow-x: auto;
   max-width: 100%;
   padding-right: 30px;
+  scrollbar-width: thin;
 }
 
 :deep(.url-select .el-select__tags-text) {
   display: inline-block;
-  max-width: 100px;
+  max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 13px;
 }
 
-/* 操作按钮样式 */
-.action-button {
-  transition: all 0.3s ease;
+:deep(.url-select .el-tag) {
+  background-color: #eef6ff;
+  border-color: #d6e8ff;
+  color: #2b85e4;
+  margin-right: 6px;
+  border-radius: 6px;
+  padding: 0 8px;
+  height: 28px;
+  line-height: 26px;
+  transition: all 0.3s;
 }
 
-.action-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+:deep(.url-select .el-tag:hover) {
+  background-color: #d6e8ff;
 }
 
-/* 错误消息样式 */
-.error-message {
-  color: #f56c6c;
-  font-size: 14px;
-  margin-top: 8px;
-  padding: 8px 16px;
-  background-color: #fef0f0;
+:deep(.url-select .el-tag .el-tag__close) {
+  color: #2b85e4;
+  background-color: transparent;
+}
+
+:deep(.url-select .el-tag .el-tag__close:hover) {
+  background-color: #2b85e4;
+  color: #fff;
+}
+
+:deep(.url-select .el-select-dropdown__item) {
+  padding: 10px 16px;
   border-radius: 4px;
-  border-left: 3px solid #f56c6c;
+  margin: 0 6px;
+  transition: all 0.2s;
 }
-</style>
 
-<style>
-/* 全局样式 */
-.el-message {
-  min-width: 300px;
+:deep(.url-select .el-select-dropdown__item:hover) {
+  background-color: #f0f7ff;
+}
+
+:deep(.url-select .el-select-dropdown__item.selected) {
+  background-color: #eef6ff;
+  color: #2b85e4;
+  font-weight: 600;
+}
+
+:deep(.url-select .el-input__wrapper) {
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 4px 12px;
+  box-shadow: 0 0 0 1px #dcdee2 inset;
+  transition: all 0.3s;
 }
 
-.el-message__content {
-  font-size: 14px;
-  font-weight: 500;
+:deep(.url-select .el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px #5cadff inset;
 }
 
-.el-message--success {
-  background-color: #f0f9eb;
-  border-color: #e1f3d8;
-}
-
-.el-message--error {
-  background-color: #fef0f0;
-  border-color: #fde2e2;
-}
-
-.el-message--warning {
-  background-color: #fdf6ec;
-  border-color: #faecd8;
-}
-
-.el-message--info {
-  background-color: #edf2fc;
-  border-color: #ebeef5;
+:deep(.url-select .el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px #2b85e4 inset, 0 0 0 3px rgba(43, 133, 228, 0.1);
 }
 </style> 

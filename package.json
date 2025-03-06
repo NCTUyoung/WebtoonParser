@@ -10,7 +10,17 @@
     "build:win": "electron-vite build && electron-builder --win --config electron-builder.config.js",
     "build:mac": "electron-vite build && electron-builder --mac --config electron-builder.config.js",
     "build:linux": "electron-vite build && electron-builder --linux --config electron-builder.config.js",
-    "preview": "electron-vite preview"
+    "preview": "electron-vite preview",
+    "test": "mocha tests/index.js",
+    "test:download": "mocha tests/download_test.js",
+    "test:excel": "mocha tests/excel_output_test.js",
+    "test:schedule": "mocha tests/schedule_test.js",
+    "test:ui": "playwright test --config=electron.playwright.config.js",
+    "test:ui:download": "playwright test tests/ui/download_button_test.js --config=electron.playwright.config.js",
+    "test:ui:schedule": "playwright test tests/ui/schedule_button_test.js --config=electron.playwright.config.js",
+    "test:ui:debug": "playwright test --config=electron.playwright.config.js --debug",
+    "test:ui:report": "npx playwright show-report",
+    "test:ui:screenshots": "node tests/ui/view_screenshots.js"
   },
   "dependencies": {
     "axios": "^1.6.7",
@@ -24,14 +34,20 @@
     "vue": "^3.4.19"
   },
   "devDependencies": {
+    "@playwright/test": "^1.42.1",
     "@types/node": "^20.11.20",
     "@vitejs/plugin-vue": "^5.0.4",
     "@vue/compiler-sfc": "^3.4.19",
+    "chai": "^4.5.0",
     "cross-env": "^7.0.3",
     "electron": "^29.0.1",
     "electron-builder": "^24.12.0",
     "electron-vite": "^2.0.0",
+    "mocha": "^10.8.2",
+    "playwright": "^1.42.1",
     "sass-loader": "^14.1.1",
+    "sinon": "^17.0.1",
+    "spectron": "^19.0.0",
     "typescript": "^5.3.3",
     "vite": "^5.1.4",
     "vite-plugin-electron-renderer": "^0.14.6"

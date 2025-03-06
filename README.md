@@ -1,183 +1,153 @@
-# Electron项目结构分析工具
+# Webtoon Parser
 
-这个工具集用于分析Electron项目的结构，并生成可视化的图表，帮助开发者更好地理解项目架构。
+<div align="center">
+  <img src="https://img.shields.io/badge/版本-2.0.0-blue.svg" alt="版本"/>
+  <img src="https://img.shields.io/badge/Electron-27.0.0-47848F?style=flat&logo=electron&logoColor=white" alt="Electron"/>
+  <img src="https://img.shields.io/badge/Vue.js-3.3.4-4FC08D?style=flat&logo=vue.js&logoColor=white" alt="Vue.js"/>
+  <img src="https://img.shields.io/badge/Element_Plus-2.3.8-409EFF?style=flat&logo=element&logoColor=white" alt="Element Plus"/>
+</div>
 
-## 功能特点
+## 📑 目錄
 
-- 生成项目文件结构的可视化图表（SVG或HTML）
-- 分析Electron应用的主进程、渲染进程和预加载脚本之间的关系
-- 识别IPC通信通道
-- 分析组件依赖关系
-- 分析技术栈和业务逻辑
-- 输出详细的JSON分析结果
+- [項目概述](#-項目概述)
+- [功能特點](#-功能特點)
+- [安裝與使用](#-安裝與使用)
+- [V2版本更新](#-v2版本更新)
+- [技術實現](#-技術實現)
+- [常見問題](#-常見問題)
+- [未來計劃](#-未來計劃)
+- [貢獻指南](#-貢獻指南)
+- [許可協議](#-許可協議)
 
-## 使用方法
+## 🔍 項目概述
 
-### 环境要求
+Webtoon Parser 是一個基於 Electron 的桌面應用程序，專為抓取和解析 Webtoon 網站上的漫畫信息而設計。該應用程序提供了直觀的用戶界面，允許用戶輕鬆輸入 Webtoon 漫畫 URL，然後自動抓取漫畫的基本信息、章節列表等數據，並將其保存為結構化的 Excel 文件。
 
-- Python 3.6+
-- 对于SVG图生成：Graphviz (需要单独安装)
-- Python依赖包：graphviz (仅用于SVG图生成)
+## ✨ 功能特點
 
-### 安装依赖
+- **基本爬蟲功能**：自動抓取漫畫標題、作者、評分、閱讀量等基本信息
+- **章節數據收集**：獲取所有章節的發布日期、閱讀量、點贊數等數據
+- **批量處理**：支持同時添加和處理多個 URL，提高工作效率
+- **定時抓取**：設置定時任務，按計劃自動執行抓取
+- **數據導出**：將抓取的數據導出為格式良好的 Excel 文件
+- **URL 歷史記錄**：保存和管理已處理的 URL 歷史記錄
+- **自定義保存路徑**：選擇 Excel 文件的保存位置
+- **多語言支持**：完整的繁體中文界面
 
-```bash
-pip install graphviz
-```
+## 🚀 安裝與使用
 
-注意：如果要生成SVG图，您还需要安装Graphviz软件包。请访问[Graphviz官网](https://graphviz.org/download/)下载并安装适合您操作系统的版本。
+### 系統要求
 
-### 一键生成所有图表和分析（推荐）
+- Windows 10/11
+- macOS 10.13 或更高版本
+- Linux (Ubuntu 18.04 或更高版本)
 
-最简单的方法是运行增强版的一键生成脚本：
+### 下載與安裝
 
-```bash
-python generate_all_diagrams_v2.py
-```
+1. 從 [Releases](https://github.com/yourusername/webtoon-parser/releases) 頁面下載最新版本
+2. 根據您的操作系統選擇對應的安裝包：
+   - Windows: `.exe` 或 `.msi` 文件
+   - macOS: `.dmg` 文件
+   - Linux: `.AppImage` 或 `.deb` 文件
+3. 按照安裝向導完成安裝
 
-该脚本会自动检测您的环境，并根据是否安装了Graphviz选择合适的生成方式。它会生成所有可能的图表和分析，包括基本的和详细的。
+### 基本使用
 
-### 无需安装Graphviz的详细HTML可视化
+1. 啟動應用程序
+2. 在 URL 輸入框中輸入 Webtoon 漫畫的 URL
+3. 點擊「開始抓取」按鈕
+4. 等待抓取完成，查看日誌信息
+5. 抓取完成後，Excel 文件將保存到指定位置
 
-如果您不想安装Graphviz软件，可以使用详细的HTML可视化脚本：
+## 🆕 V2版本更新
 
-```bash
-python generate_detailed_html.py
-```
+V2 版本帶來了多項重要改進和新功能：
 
-这将生成两个文件：
-- `detailed_electron_architecture.html`：包含详细的Electron架构HTML可视化，包括技术栈、IPC通道、Vue组件和业务逻辑分析
-- `detailed_electron_analysis.json`：包含详细的分析结果JSON文件
+### 批量處理功能
 
-详细的HTML可视化提供了交互式的架构浏览，包含选项卡式界面，可以查看不同方面的技术细节。
+- **多 URL 同時處理**：支持一次性添加多個 URL 進行處理
+- **URL 歷史記錄管理**：自動保存已處理的 URL 歷史記錄，支持查看、編輯和刪除
 
-### 无需安装Graphviz的基本HTML可视化
+### 用戶體驗優化
 
-如果您只需要基本的项目结构可视化：
+- **界面美化**：重新設計的卡片式布局，添加動畫和過渡效果
+- **交互改進**：添加拖放功能，支持拖放 URL 到應用
+- **外部瀏覽器打開功能**：支持在默認瀏覽器中打開 Webtoon 鏈接
 
-```bash
-python generate_project_svg_simple.py
-```
+### 數據處理增強
 
-这将生成两个文件：
-- `project_structure.html`：包含项目结构的HTML可视化
-- `project_structure.json`：包含项目结构的JSON文件
+- **Excel 輸出優化**：改進 Excel 文件格式和樣式，添加自動排序功能
+- **自定義保存路徑**：支持用戶選擇 Excel 文件保存位置，記住上次選擇的路徑
 
-### 详细的Electron架构SVG图（需要Graphviz）
+### 技術改進
 
-运行以下命令生成详细的Electron架构SVG图：
+- **編碼問題解決**：完善中文編碼處理，解決跨平台編碼兼容性問題
+- **錯誤處理增強**：添加更詳細的錯誤日誌，改進錯誤恢復機制
+- **性能優化**：減少不必要的網絡請求，優化數據處理邏輯
 
-```bash
-python generate_detailed_architecture.py
-```
+### 多語言支持
 
-这将生成`detailed_electron_architecture.svg`文件，展示Electron应用的详细架构，包括技术栈、文件关系和业务逻辑。
+- **繁體中文界面**：所有界面元素支持繁體中文，錯誤消息和提示使用繁體中文
 
-### 基本项目结构图 (需要Graphviz)
+### 測試與驗證
 
-运行以下命令生成基本的项目结构SVG图：
+V2版本經過了全面的測試和驗證，確保所有功能穩定可靠：
 
-```bash
-python generate_project_svg.py
-```
+- **立即下載功能測試**：確認檔案能夠正確下載到指定位置
+- **多URL處理測試**：驗證多組URL（至少兩組）能夠正確輸出到Excel檔案
+- **定時功能測試**：確認定時任務能夠按設定時間正常觸發
+- **跨平台兼容性測試**：在Windows和macOS系統上進行測試，確保一致的用戶體驗
 
-这将在当前目录下生成`project_structure.svg`文件。
+## 🔧 技術實現
 
-### 详细项目分析 (需要Graphviz)
+Webtoon Parser 使用了以下技術：
 
-运行以下命令进行详细的项目分析并生成SVG图：
+- **Electron**：跨平台桌面應用框架
+- **Vue.js**：前端框架，用於構建用戶界面
+- **Element Plus**：基於 Vue 3 的組件庫
+- **Axios**：用於發送 HTTP 請求
+- **Cheerio**：用於解析 HTML
+- **ExcelJS**：用於生成 Excel 文件
+- **Node Schedule**：用於實現定時任務
 
-```bash
-python analyze_electron_project.py
-```
+## ❓ 常見問題
 
-这将生成两个文件：
-- `electron_project_analysis.svg`：包含项目结构和组件关系的SVG图
-- `electron_project_analysis.json`：包含详细分析结果的JSON文件
+### 應用程序無法啟動
 
-### Electron架构图 (需要Graphviz)
+- 確保您的系統滿足最低要求
+- 嘗試重新安裝應用程序
+- 檢查是否有防病毒軟件阻止應用程序運行
 
-运行以下命令生成Electron架构图：
+### 無法抓取數據
 
-```bash
-python generate_electron_architecture.py
-```
+- 確保輸入的 URL 格式正確
+- 檢查您的網絡連接
+- 確認目標網站是否可訪問
 
-这将生成`electron_architecture.svg`文件，展示Electron应用的三个主要部分（主进程、渲染进程和预加载脚本）之间的关系。
+### Excel 文件無法打開
 
-## 分析结果说明
+- 確保您的系統安裝了 Microsoft Excel 或兼容的軟件
+- 檢查文件是否被其他程序佔用
+- 嘗試使用不同的應用程序打開文件
 
-### 详细HTML可视化内容
+## 📈 未來計劃
 
-详细的HTML可视化包含以下内容：
+- 支持更多漫畫網站
+- 添加數據可視化功能
+- 實現漫畫內容下載功能
+- 添加多語言支持（英文、日文等）
+- 開發插件系統
 
-- **架构概览**：展示主进程、渲染进程、预加载脚本和业务逻辑的关系
-- **技术栈分析**：列出每个进程使用的技术和库
-- **IPC通信通道**：分析进程间通信的通道和方向
-- **Vue组件**：列出渲染进程中的Vue组件
-- **业务逻辑**：分析核心业务类的方法和依赖
+## 👥 貢獻指南
 
-### SVG图例
+我們歡迎任何形式的貢獻！如果您想參與項目開發，請按照以下步驟：
 
-- **黄色节点**：JavaScript文件（主进程）
-- **绿色节点**：Vue组件（渲染进程）
-- **蓝色节点**：TypeScript文件和预加载脚本
-- **橙色节点**：HTML文件
-- **红色边**：IPC通信通道
-- **虚线边**：模块依赖关系
+1. Fork 項目
+2. 創建您的特性分支 (`git checkout -b feature/amazing-feature`)
+3. 提交您的更改 (`git commit -m 'Add some amazing feature'`)
+4. 推送到分支 (`git push origin feature/amazing-feature`)
+5. 打開一個 Pull Request
 
-### JSON分析结果
+## 📄 許可協議
 
-JSON分析结果包含以下主要部分：
-
-- `tech_stack`：项目中使用的技术栈，按进程分类
-- `components`：项目中的Vue组件
-- `ipc_channels`：IPC通信通道列表
-- `business_logic`：业务逻辑分析，包括方法和依赖
-- `files`：项目中的文件列表，按进程分类
-
-## 自定义分析
-
-如果需要自定义分析，可以修改Python脚本中的参数：
-
-```python
-# 修改项目根目录
-visualizer = DetailedElectronHTMLVisualizer(root_dir='your_src_path')
-
-# 修改输出文件名
-visualizer.generate_html_visualization(output_file='your_output_name.html')
-```
-
-## 示例输出
-
-![项目结构示例](project_structure.svg)
-
-## 注意事项
-
-- 分析结果的准确性取决于代码的规范性和一致性
-- 对于非常大的项目，生成的图可能会很复杂，建议按模块分别分析
-- 某些特殊的代码模式可能无法被正确识别
-
-## 总结
-
-这个工具集提供了多种方式来可视化和分析Electron项目的结构：
-
-1. **HTML可视化** - 提供交互式的项目结构和架构浏览，不需要安装额外软件
-2. **SVG图表** - 提供静态的、高质量的项目结构和关系图
-3. **JSON数据** - 提供结构化的项目分析数据，可用于进一步处理
-
-无论您是Electron项目的新手还是有经验的开发者，这些工具都能帮助您更好地理解项目架构，特别是对于复杂的、多文件的Electron应用。
-
-### 工具列表
-
-| 脚本名称 | 功能描述 | 依赖要求 |
-|---------|---------|---------|
-| `generate_all_diagrams_v2.py` | 一键生成所有图表和分析（增强版） | 自动适应环境 |
-| `generate_detailed_html.py` | 生成详细的HTML架构可视化 | 无特殊依赖 |
-| `generate_project_svg_simple.py` | 生成基本HTML可视化 | 无特殊依赖 |
-| `generate_detailed_architecture.py` | 生成详细的Electron架构SVG图 | 需要Graphviz |
-| `generate_project_svg.py` | 生成项目结构SVG图 | 需要Graphviz |
-| `analyze_electron_project.py` | 详细分析项目并生成SVG图 | 需要Graphviz |
-| `generate_electron_architecture.py` | 生成Electron架构图 | 需要Graphviz |
-
-希望这些工具能帮助您更好地理解和开发Electron应用！
+本項目基於 MIT 許可協議發布 - 詳情請參見 [LICENSE](LICENSE) 文件。

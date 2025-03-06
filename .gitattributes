@@ -1,0 +1,58 @@
+# 设置默认行为，如果core.autocrlf未设置
+* text=auto
+
+# 明确声明文本文件
+*.js text
+*.ts text
+*.jsx text
+*.tsx text
+*.json text
+*.html text
+*.css text
+*.scss text
+*.vue text
+*.md text
+*.yml text
+*.yaml text
+*.xml text
+*.svg text
+*.txt text
+
+# 声明二进制文件
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.ttf binary
+*.otf binary
+*.zip binary
+*.gz binary
+*.tar binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+
+# 特定文件的行尾设置
+*.sh text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 测试文件
+*.test.js text
+*.spec.js text
+*.test.ts text
+*.spec.ts text
+
+# 配置文件
+.gitignore text
+.gitattributes text
+.editorconfig text
+.prettierrc text
+.eslintrc text
+.babelrc text
+.env.* text 
