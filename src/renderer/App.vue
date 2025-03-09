@@ -29,6 +29,7 @@
           <ScheduleSettings
             v-model:schedule="scheduleSettings"
             :is-running="isScheduleRunning"
+            :next-run-time="nextRunTime"
             @toggle-schedule="toggleSchedule"
           />
         </el-card>
@@ -87,9 +88,11 @@ const logViewerRef = ref()
 const urls = ref('')
 const logs = ref<LogMessage[]>([])
 const isScheduleRunning = ref(false)
+const nextRunTime = ref('')
 
 // 將 scheduleSettings 改為 ref，使其能被子組件的 v-model 正確更新
 const scheduleSettings = ref({
+  scheduleType: 'weekly',
   day: '五',
   hour: '18',
   minute: '00',
@@ -222,6 +225,11 @@ onMounted(async () => {
     console.log('urls.value:', urls.value);
     startScraping();
   })
+  
+  // 監聽下次執行時間的更新
+  window.electron.on('next-run-time', (time: string) => {
+    nextRunTime.value = time
+  })
 
   // 當關閉應用前保存所有設置
   window.addEventListener('beforeunload', () => {
@@ -242,6 +250,7 @@ onUnmounted(() => {
   window.electron.removeAllListeners('scraping-complete')
   window.electron.removeAllListeners('scraping-error')
   window.electron.removeAllListeners('schedule-trigger')
+  window.electron.removeAllListeners('next-run-time')
   window.removeEventListener('beforeunload', () => {
     saveUrls()
     saveScheduleSettings()

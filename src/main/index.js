@@ -3,6 +3,27 @@ const path = require('path')
 const WebtoonScraper = require('./webtoon')
 const schedule = require('node-schedule')
 const Store = require('electron-store')
+const iconv = require('iconv-lite')
+
+// 創建共用的日誌函數
+function logMessage(message, event) {
+  // 處理 Windows 平台的 Big5 編碼
+  if (process.platform === 'win32') {
+    try {
+      const encoded = iconv.encode(message + '\n', 'big5')
+      process.stdout.write(encoded)
+    } catch (error) {
+      console.log('[編碼錯誤]', message)
+    }
+  } else {
+    console.log(message)
+  }
+  
+  // 如果提供了 event 參數，則將消息發送到前端
+  if (event) {
+    event.reply('log-message', message)
+  }
+}
 
 let mainWindow
 let scheduleJobs = new Map()
@@ -87,50 +108,61 @@ ipcMain.handle('start-scraping', async (event, args) => {
     if (isTest && process.env.TEMP_DOWNLOAD_PATH) {
       externalSavePath = process.env.TEMP_DOWNLOAD_PATH;
     }
-
+    
+    // 創建一個特殊的日誌函數，該函數會將日誌發送到前端
+    const scraperLogFunction = (message) => {
+      logMessage(message);
+      event.sender.send('log-message', message);
+    };
+    
+    scraperLogFunction('Starting to scrape URLs: ' + urlList.join(', '))
+    
     // 依序處理每個 URL
     for (const url of urlList) {
-      console.log('Starting to scrape URL:', url)
-      const scraper = new WebtoonScraper(url)
+      scraperLogFunction(`Starting to scrape URL: ${url}`)
       
-      event.sender.send('log-message', `Starting to scrape: ${url}`)
+      // 創建爬蟲實例，傳入特殊的日誌函數
+      const scraper = new WebtoonScraper(url, scraperLogFunction)
       
-      console.log('Getting comic basic information...')
+      scraperLogFunction('Getting comic basic information...')
       const info = await scraper.getWebtoonInfo()
-      console.log('Basic information:', info)
-      event.sender.send('log-message', `Successfully got basic information for ${info.title}`)
+      scraperLogFunction('Basic information: ' + JSON.stringify(info, null, 2))
       
-      console.log('Starting to get chapter list...')
-      event.sender.send('log-message', 'Starting to get chapter list...')
+      scraperLogFunction('Starting to get chapter list...')
       const chapters = await scraper.getAllChapters()
-      console.log(`Got ${chapters.length} chapters`)
-      event.sender.send('log-message', `Successfully got ${chapters.length} chapters`)
+      scraperLogFunction(`Got ${chapters.length} chapters`)
       
-      console.log('Saving data to Excel...')
+      scraperLogFunction('Saving data to Excel...')
       await scraper.saveToExcel(info, chapters, externalSavePath)
-      console.log('Excel saving completed')
-      event.sender.send('log-message', 'Data saved to Excel file')
+      scraperLogFunction('Excel saving completed')
     }
     
+    scraperLogFunction('All URLs processed successfully')
     return { success: true }
   } catch (error) {
-    console.error('Scraping process error:', error)
-    event.sender.send('log-message', `Error: ${error.message}`)
-    event.sender.send('scraping-error', error.message)
-    throw error
+    logMessage(`Error during scraping: ${error.message}`)
+    event.sender.send('scraping-error', `Error: ${error.message}`)
+    return { success: false, error: error.message }
   }
 })
 
 // 處理定時任務
 ipcMain.on('start-schedule', (event, settings) => {
-  const { day, hour, minute, timezone } = settings;
+  const { scheduleType, day, hour, minute, timezone } = settings;
   const dayMap = {
     '一': 1, '二': 2, '三': 3, '四': 4,
     '五': 5, '六': 6, '日': 0
   };
 
   const rule = new schedule.RecurrenceRule();
-  rule.dayOfWeek = dayMap[day];
+  
+  // 根據定時類型設置不同的規則
+  if (scheduleType === 'weekly') {
+    rule.dayOfWeek = dayMap[day];
+  } else if (scheduleType === 'daily') {
+    // 每日定時不需要設置 dayOfWeek
+  }
+  
   rule.hour = parseInt(hour);
   rule.minute = parseInt(minute);
   rule.tz = timezone;
@@ -143,43 +175,51 @@ ipcMain.on('start-schedule', (event, settings) => {
   scheduledTime.setSeconds(0);
   scheduledTime.setMilliseconds(0);
 
-  console.log('now:', now);
-  console.log('scheduledTime:', scheduledTime);
-  console.log('now.getDay():', now.getDay(), ' rule.dayOfWeek:', rule.dayOfWeek);
+  logMessage('當前時間: ' + now.toString());
+  logMessage('排程時間: ' + scheduledTime.toString());
+  
+  if (scheduleType === 'weekly') {
+    logMessage(`當前星期: ${now.getDay()}, 設定星期: ${rule.dayOfWeek}`);
+  }
 
   // 如果設定的是今天且已經過了，立即觸發一次
   // 或者在测试模式下且设置了立即触发，也立即触发一次
   const shouldTriggerImmediately = 
-    (now.getDay() === rule.dayOfWeek && now > scheduledTime) || 
+    (scheduleType === 'daily' && now > scheduledTime) || 
+    (scheduleType === 'weekly' && now.getDay() === rule.dayOfWeek && now > scheduledTime) || 
     (isTest && process.env.IMMEDIATE_TRIGGER === 'true');
   
   if (shouldTriggerImmediately) {
-    event.reply('log-message', 'Past the set time or in test mode, executing once immediately');
+    logMessage('已過設定時間或處於測試模式，立即執行一次', event);
     // 立即觸發一次，再設定定時任務
     mainWindow.webContents.send('schedule-trigger');
   } else {
-    event.reply('log-message', 'Waiting for next schedule time to arrive');
+    logMessage('等待下次排程時間到達', event);
   }
 
   const job = schedule.scheduleJob(rule, () => {
+    logMessage('定時任務觸發');
     mainWindow.webContents.send('schedule-trigger');
   });
 
   scheduleJobs.set('main', job);
-  event.reply('log-message', `Schedule task started: Every ${day} ${hour}:${minute} (${timezone})`);
-
-  const nextInvocation = job.nextInvocation();
-  const formattedNextInvocation = nextInvocation.toLocaleString('zh-TW', {
-      timeZone: timezone,
-      hour12: false,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-  });
-  event.reply('log-message', `Next trigger time: ${formattedNextInvocation}`);
+  
+  // 根據定時類型顯示不同的日誌信息
+  let scheduleMessage = '';
+  if (scheduleType === 'weekly') {
+    scheduleMessage = `定時任務已啟動: 每週${day} ${hour}:${minute} (${timezone})`;
+  } else if (scheduleType === 'daily') {
+    scheduleMessage = `定時任務已啟動: 每天 ${hour}:${minute} (${timezone})`;
+  }
+  
+  logMessage(scheduleMessage, event);
+  
+  // 計算下次執行時間
+  const nextRun = job.nextInvocation();
+  const nextRunMessage = `下次執行時間: ${nextRun}`;
+  logMessage(nextRunMessage, event);
+  
+  return { success: true, message: scheduleMessage };
 });
 
 ipcMain.on('stop-schedule', (event) => {
@@ -187,7 +227,8 @@ ipcMain.on('stop-schedule', (event) => {
   if (job) {
     job.cancel()
     scheduleJobs.delete('main')
-    event.reply('log-message', 'Schedule task stopped')
+    logMessage('定時任務已停止', event)
+    event.reply('log-message', '定時任務已停止')
   }
 })
 
@@ -221,7 +262,7 @@ ipcMain.handle('select-directory', async () => {
   })
   
   if (!result.canceled) {
-    console.log('Selected new path:', result.filePaths[0])
+    logMessage('已選擇新路徑: ' + result.filePaths[0])
     return result.filePaths[0]
   }
   return null
@@ -235,23 +276,20 @@ ipcMain.handle('load-save-path', () => {
   
   try {
     const savedPath = store.get('save-path')
-    console.log('Loaded save path:', savedPath)
+    logMessage('已載入儲存路徑: ' + savedPath)
     return savedPath
   } catch (error) {
-    console.error('Failed to load save path:', error)
+    logMessage('載入儲存路徑失敗: ' + error.message)
     return app.getPath('downloads')
   }
 })
 
 ipcMain.on('save-save-path', (event, path) => {
   try {
-    console.log('Saving path:', path)
+    logMessage(`儲存路徑已更新: ${path}`, event);
     store.set('save-path', path)
-    console.log('Confirmed saved path:', store.get('save-path'))
-    event.reply('log-message', `Save path updated: ${path}`)
   } catch (error) {
-    console.error('Failed to save path:', error)
-    event.reply('log-message', `Failed to save path: ${error.message}`)
+    logMessage(`儲存路徑失敗: ${error.message}`, event);
   }
 })
 
@@ -266,11 +304,8 @@ ipcMain.on('save-url-history', (event, history) => {
 
 // 處理在新視窗開啟URL
 ipcMain.on('open-external-url', (event, url) => {
-  try {
-    console.log('Opening external URL:', url)
-    shell.openExternal(url)
-  } catch (error) {
-    console.error('Failed to open external URL:', error)
-    event.reply('log-message', `無法開啟URL: ${error.message}`)
-  }
+  logMessage(`正在開啟外部URL: ${url}`);
+  shell.openExternal(url).catch(error => {
+    logMessage(`無法開啟URL: ${error.message}`, event);
+  });
 }) 

@@ -16,21 +16,3 @@ body {
   border-radius: $border-radius-large;
   box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
 }
-
-.el-button {
-  &--primary {
-    background-color: $primary-color;
-  }
-  
-  &--success {
-    background-color: $success-color;
-  }
-  
-  &--warning {
-    background-color: $warning-color;
-  }
-  
-  &--danger {
-    background-color: $danger-color;
-  }
-} 
