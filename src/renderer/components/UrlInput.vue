@@ -79,7 +79,7 @@
       :loading="loading"
       @open-browser="openInBrowser"
       @submit="handleSubmit"
-    />
+    ></url-action-footer>
     
     <!-- 錯誤消息 -->
     <url-error-message :message="error" />
@@ -98,7 +98,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
-import { DocumentCopy, Document, ArrowDown, QuestionFilled } from '@element-plus/icons-vue'
+import { DocumentCopy, Document, ArrowDown, QuestionFilled, Download } from '@element-plus/icons-vue'
 import UrlHistoryDialog from './url-input/UrlHistoryDialog.vue'
 import UrlHelpGuide from './url-input/UrlHelpGuide.vue'
 import UrlHistorySelector from './url-input/UrlHistorySelector.vue'
@@ -119,7 +119,7 @@ const props = defineProps({
 })
 
 // 定義emit
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'start-scraping'])
 
 // 定义接口
 interface HistoryItem {
@@ -150,6 +150,7 @@ const getUrlCount = () => {
 
 // 設置loading狀態的方法，供外部調用
 const setLoading = (isLoading: boolean) => {
+  console.log('UrlInput setLoading:', isLoading)
   loading.value = isLoading
 }
 
@@ -256,18 +257,10 @@ const handleSubmit = async () => {
   }
   
   error.value = ''
+  loading.value = true
   
-  try {
-    // 使用invoke調用start-scraping方法，傳遞正確的參數格式，包括externalSavePath
-    await window.electron.invoke('start-scraping', {
-      urls: currentUrls.value,
-      savePath: props.externalSavePath || null // 使用傳入的externalSavePath或默認保存路徑
-    })
-    ElMessage.success('已開始下載')
-  } catch (error) {
-    console.error('下載請求失敗:', error)
-    ElMessage.error('下載請求失敗')
-  }
+  // 發出事件，讓父組件處理爬取過程
+  emit('start-scraping')
 }
 
 // 从剪贴板粘贴
@@ -341,7 +334,7 @@ const openExternalUrl = (url: string) => {
   window.electron.send('open-external-url', url)
 }
 
-// 组件挂载时加载历史记录
+// 組件挂載時加載歷史記錄
 onMounted(() => {
   loadHistory()
   
@@ -402,6 +395,7 @@ watch(showHelp, (newValue) => {
   background-color: #fff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   overflow: hidden;
+  overflow-x: hidden; /* 防止內容溢出導致版型變寬 */
 }
 
 .input-header {

@@ -16,7 +16,12 @@
               <h2>Webtoon 網址</h2>
             </div>
           </template>
-          <UrlInput ref="urlInputRef" v-model="urls" :external-save-path="savePath" />
+          <UrlInput 
+            ref="urlInputRef" 
+            v-model="urls" 
+            :external-save-path="savePath" 
+            @start-scraping="startScraping()"
+          />
         </el-card>
 
         <!-- 定時設置區域 -->
@@ -41,7 +46,10 @@
               <h2>儲存設置</h2>
             </div>
           </template>
-          <SavePathSettings v-model="savePath" />
+          <SavePathSettings 
+            v-model="savePath" 
+            v-model:append-mode="appendMode" 
+          />
         </el-card>
 
         <!-- 日誌查看區域 -->
@@ -101,14 +109,16 @@ const scheduleSettings = ref({
 
 // 儲存路徑
 const savePath = ref('')
+const appendMode = ref(true)
 
 // 添加調試日誌
 console.log('inin savePath:', savePath.value)
 
 // 開始爬取函數，使用 invoke 與主進程的 ipcMain.handle 對應
-const startScraping = async () => {
+const startScraping = async (forceAppend = false) => {
   console.log('startScraping 觸發')
   console.log('urls.value:', urls.value)
+  console.log('append mode:', forceAppend || appendMode.value)
 
   if (!urls.value) {
     ElMessage.warning('請輸入至少一個 URL')
@@ -122,14 +132,19 @@ const startScraping = async () => {
   urlInputRef.value?.setLoading(true)
 
   try {
-    // 執行 invoke，若成功則代表爬取完成
-    await window.electron.invoke('start-scraping', {
+    // 執行 invoke，若成功則代表爬取開始
+    const result = await window.electron.invoke('start-scraping', {
       urls: urlList,
-      savePath: savePath.value
+      savePath: savePath.value,
+      append: forceAppend || appendMode.value
     })
-    // 成功回傳後直接停止 loading 並顯示成功訊息
-    urlInputRef.value?.setLoading(false)
-    ElMessage.success('爬取完成')
+    
+    // 檢查結果，如果成功則顯示成功訊息並停止加載狀態
+    if (result && result.success) {
+      console.log('爬取成功，結果：', result)
+      urlInputRef.value?.setLoading(false)
+      ElMessage.success('爬取完成')
+    }
   } catch (error: any) {
     console.error('爬取發生錯誤：', error)
     // 發生錯誤時停止 loading 狀態並顯示錯誤提示
@@ -210,6 +225,7 @@ onMounted(async () => {
   })
   
   window.electron.on('scraping-complete', () => {
+    console.log('收到 scraping-complete 事件')
     urlInputRef.value?.setLoading(false)
     ElMessage.success('爬取完成')
   })
@@ -223,7 +239,9 @@ onMounted(async () => {
     console.log('收到 schedule-trigger 事件');
     // 檢查 urls 是否還存在
     console.log('urls.value:', urls.value);
-    startScraping();
+    // 定時任務觸發時使用 appendMode 值，如果為 false 則強制使用 true
+    console.log('定時任務使用的附加模式:', appendMode.value ? '開啟' : '強制開啟');
+    startScraping(true); // 定時任務總是使用附加模式
   })
   
   // 監聽下次執行時間的更新
@@ -347,6 +365,7 @@ onUnmounted(() => {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
   position: relative;
   z-index: 1;
+  overflow-x: hidden; /* 防止內容溢出導致版型變寬 */
 }
 
 /* 卡片樣式 */

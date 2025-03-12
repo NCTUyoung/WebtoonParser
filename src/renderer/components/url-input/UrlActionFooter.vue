@@ -1,38 +1,44 @@
 <template>
   <div class="input-footer">
-    <div class="url-count" v-if="urlCount > 0">
-      已輸入 {{ urlCount }} 個網址
+    <div class="left-section">
+      <div class="url-count" v-if="urlCount > 0">
+        已輸入 {{ urlCount }} 個網址
+      </div>
     </div>
-    <div class="action-buttons">
-      <el-button 
-        @click="$emit('submit')" 
-        :disabled="!hasUrl || loading" 
-        class="submit-btn" 
-        :loading="loading"
-        type="primary"
-        plain
-      >
-        <el-icon><Download /></el-icon> 開始下載
-      </el-button>
-      
-      <el-tooltip content="在瀏覽器中打開" placement="top" v-if="hasUrl">
-        <el-button
-          @click="$emit('open-browser')"
-          class="open-button"
-          :disabled="!hasUrl || loading"
+    
+    <div class="right-section">
+      <div class="button-group">
+        <el-button 
+          @click="$emit('submit')" 
+          :disabled="!hasUrl || loading" 
+          class="submit-btn" 
+          :loading="loading"
+          type="primary"
           plain
         >
-          <el-icon><Link /></el-icon>
+          <el-icon><Download /></el-icon> 開始下載
         </el-button>
-      </el-tooltip>
+        
+        <el-tooltip content="在瀏覽器中打開" placement="top" v-if="hasUrl">
+          <el-button
+            @click="$emit('open-browser')"
+            class="open-button"
+            :disabled="!hasUrl || loading"
+            plain
+          >
+            <el-icon><Link /></el-icon>
+          </el-button>
+        </el-tooltip>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import { Link, Download } from '@element-plus/icons-vue'
 
-defineProps({
+const props = defineProps({
   urlCount: {
     type: Number,
     default: 0
@@ -47,7 +53,7 @@ defineProps({
   }
 })
 
-defineEmits(['open-browser', 'submit'])
+const emit = defineEmits(['open-browser', 'submit'])
 </script>
 
 <style scoped>
@@ -60,6 +66,17 @@ defineEmits(['open-browser', 'submit'])
   background-color: #f8f9fb;
   border-radius: 0 0 6px 6px;
   box-sizing: border-box;
+}
+
+.left-section {
+  display: flex;
+  align-items: center;
+}
+
+.right-section {
+  display: flex;
+  gap: 16px;
+  align-items: center;
 }
 
 .url-count {
@@ -80,7 +97,7 @@ defineEmits(['open-browser', 'submit'])
   margin-right: 6px;
 }
 
-.action-buttons {
+.button-group {
   display: flex;
   gap: 8px;
   align-items: center;
@@ -91,44 +108,56 @@ defineEmits(['open-browser', 'submit'])
   height: 34px;
   font-size: 14px;
   font-weight: 500;
+  min-width: 120px;
 }
 
 .open-button {
   padding: 0;
   height: 34px;
   width: 34px;
-  font-size: 13px;
-  border-color: #dcdee2;
-  border-radius: 50%;
+  font-size: 16px;
+  border: 1px solid #dcdee2;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #606266;
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
   .input-footer {
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
     align-items: stretch;
-    padding: 8px 12px;
+    padding: 12px;
   }
   
-  .action-buttons {
+  .right-section {
     flex-direction: row;
-    justify-content: space-between;
     width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .button-group {
+    width: 100%;
+    justify-content: space-between;
   }
   
   .submit-btn {
     flex: 1;
   }
-  
-  .open-button {
-    width: 34px;
-  }
 }
 
 @media (max-width: 576px) {
   .input-footer {
-    padding: 8px 6px;
+    padding: 10px 8px;
+  }
+  
+  .left-section {
+    width: 100%;
+    justify-content: center;
+    margin-bottom: 4px;
   }
 }
 </style> 

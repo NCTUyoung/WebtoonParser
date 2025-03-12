@@ -89,15 +89,17 @@ ipcMain.handle('start-scraping', async (event, args) => {
     // 處理不同格式的輸入參數
     let urlList = [];
     let externalSavePath = null;
+    let append = false;
     
     // 如果args是字符串，則視為單個URL
     if (typeof args === 'string') {
       urlList = [args];
     } 
-    // 如果args是對象，則從中提取urls和savePath
+    // 如果args是對象，則從中提取urls、savePath和append
     else if (typeof args === 'object' && args !== null) {
       urlList = Array.isArray(args.urls) ? args.urls : (args.urls ? [args.urls] : []);
       externalSavePath = args.savePath || null;
+      append = args.append === true; // 確保 append 是布爾值
     }
     
     if (urlList.length === 0) {
@@ -115,7 +117,7 @@ ipcMain.handle('start-scraping', async (event, args) => {
       event.sender.send('log-message', message);
     };
     
-    scraperLogFunction('Starting to scrape URLs: ' + urlList.join(', '))
+    scraperLogFunction(`Starting to scrape URLs: ${urlList.join(', ')}${append ? ' (附加模式)' : '(覆蓋模式)'}`)
     
     // 依序處理每個 URL
     for (const url of urlList) {
@@ -132,12 +134,15 @@ ipcMain.handle('start-scraping', async (event, args) => {
       const chapters = await scraper.getAllChapters()
       scraperLogFunction(`Got ${chapters.length} chapters`)
       
-      scraperLogFunction('Saving data to Excel...')
-      await scraper.saveToExcel(info, chapters, externalSavePath)
+      scraperLogFunction(`Saving data to Excel...${append ? ' (附加模式)' : '(覆蓋模式)'}`)
+      await scraper.saveToExcel(info, chapters, externalSavePath, append)
       scraperLogFunction('Excel saving completed')
     }
     
     scraperLogFunction('All URLs processed successfully')
+    // 發送爬取完成事件
+    logMessage('正在發送 scraping-complete 事件')
+    event.sender.send('scraping-complete')
     return { success: true }
   } catch (error) {
     logMessage(`Error during scraping: ${error.message}`)
