@@ -18,13 +18,14 @@ const config = {
   excel: {
     defaultColumns: [
       { header: '日期', key: 'date', width: 20 },
-      { header: '作者', key: 'author', width: 30 },
+      { header: '作者', key: 'author', width: 20 },
       { header: '總觀看數', key: 'views', width: 15 },
       { header: '訂閱數', key: 'subscribers', width: 15 },
       { header: '評分', key: 'rating', width: 10 }
     ],
     maxSaveAttempts: 3,
-    sheetNameMaxLength: 31
+    sheetNameMaxLength: 31,
+    authorMaxLength: 20  // Maximum characters for author field
   },
   
   // 爬虫相关配置
