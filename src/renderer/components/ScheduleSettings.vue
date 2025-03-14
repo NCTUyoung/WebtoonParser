@@ -129,8 +129,7 @@
 
       <div class="schedule-actions">
         <el-button 
-          type="primary" 
-          :class="{ 'is-running': isRunning }"
+          :type="isRunning ? 'danger' : 'primary'" 
           @click="toggleSchedule"
           plain
         >

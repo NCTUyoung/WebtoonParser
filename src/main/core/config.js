@@ -1,5 +1,5 @@
 const config = {
-  // 请求相关配置
+  // Request related configuration
   request: {
     userAgents: [
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
@@ -14,7 +14,7 @@ const config = {
     randomDelayRange: 2000
   },
   
-  // Excel 相关配置
+  // Excel related configuration
   excel: {
     defaultColumns: [
       { header: '日期', key: 'date', width: 20 },
@@ -28,7 +28,7 @@ const config = {
     authorMaxLength: 20  // Maximum characters for author field
   },
   
-  // 爬虫相关配置
+  // Scraper related configuration
   scraper: {
     minPageDelay: 1000,
     maxPageDelay: 3000,
@@ -36,7 +36,7 @@ const config = {
     maxChapterDelay: 6000
   },
   
-  // 选择器配置
+  // Selector configuration
   selectors: {
     title: 'h1.subj',
     author: '.author_area',
@@ -50,6 +50,62 @@ const config = {
     pagination: '.paginate',
     nextPage: 'a.pg_next',
     prevPage: 'a.pg_prev'
+  },
+
+  // Application configuration
+  app: {
+    // Default language setting
+    defaultLocale: 'zh_TW.UTF-8',
+    
+    // Window configuration
+    window: {
+      width: 1000,
+      height: 800,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: false
+      }
+    },
+    
+    // Development mode settings
+    dev: {
+      devServerWaitTime: 2000,
+      port: 3000
+    }
+  },
+  
+  // Storage related configuration
+  storage: {
+    // Default setting values
+    defaults: {
+      scheduledDay: '五',
+      scheduledHour: '18',
+      scheduledMinute: '00',
+      timezone: 'Asia/Taipei'
+    },
+    
+    // Storage key names
+    keys: {
+      urls: 'webtoon-urls',
+      scheduleSettings: 'schedule-settings',
+      savePath: 'save-path',
+      urlHistory: 'url-history'
+    }
+  },
+  
+  // Date settings
+  date: {
+    // Weekly date mapping
+    dayOfWeekMap: {
+      '一': 1, 
+      '二': 2, 
+      '三': 3, 
+      '四': 4,
+      '五': 5, 
+      '六': 6, 
+      '日': 0
+    }
   }
 };
 

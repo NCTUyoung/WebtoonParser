@@ -1,7 +1,7 @@
 <template>
   <el-config-provider :locale="zhTw">
     <el-container class="app-container">
-      <!-- 頂部標題欄 -->
+      <!-- Header bar -->
       <el-header class="app-header">
         <div class="header-content">
           <h1>Webtoon爬蟲工具 <span class="version">v{{ version }}</span></h1>
@@ -9,7 +9,7 @@
       </el-header>
 
       <el-main class="main-content">
-        <!-- URL 輸入區域 -->
+        <!-- URL input area -->
         <el-card class="section-card">
           <template #header>
             <div class="card-header">
@@ -24,7 +24,7 @@
           />
         </el-card>
 
-        <!-- 定時設置區域 -->
+        <!-- Schedule settings area -->
         <el-card class="section-card">
           <template #header>
             <div class="card-header">
@@ -39,7 +39,7 @@
           />
         </el-card>
 
-        <!-- 儲存設置區域 -->
+        <!-- Save settings area -->
         <el-card class="section-card">
           <template #header>
             <div class="card-header">
@@ -52,7 +52,7 @@
           />
         </el-card>
 
-        <!-- 日誌查看區域 -->
+        <!-- Log viewer area -->
         <el-card class="section-card log-card">
           <template #header>
             <div class="card-header">
@@ -66,7 +66,7 @@
         </el-card>
       </el-main>
 
-      <!-- 底部版權資訊 -->
+      <!-- Footer with copyright info -->
       <el-footer class="app-footer">
         <p>&copy; {{ new Date().getFullYear() }} {{ title }}. All rights reserved.</p>
       </el-footer>
@@ -84,21 +84,21 @@ import LogViewer from './components/LogViewer.vue'
 import SavePathSettings from './components/SavePathSettings.vue'
 import type { LogMessage } from './types'
 
-// 環境變量
+// Environment variables
 const title = import.meta.env.VITE_APP_TITLE
 const version = import.meta.env.VITE_APP_VERSION
 
-// 組件引用
+// Component references
 const urlInputRef = ref<InstanceType<any> | null>(null)
 const logViewerRef = ref()
 
-// 狀態管理
+// State management
 const urls = ref('')
 const logs = ref<LogMessage[]>([])
 const isScheduleRunning = ref(false)
 const nextRunTime = ref('')
 
-// 將 scheduleSettings 改為 ref，使其能被子組件的 v-model 正確更新
+// Convert scheduleSettings to ref for proper v-model updates in child components
 const scheduleSettings = ref({
   scheduleType: 'weekly',
   day: '五',
@@ -107,16 +107,16 @@ const scheduleSettings = ref({
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
 })
 
-// 儲存路徑
+// Save path
 const savePath = ref('')
 const appendMode = ref(true)
 
-// 添加調試日誌
-console.log('inin savePath:', savePath.value)
+// Add debug logs
+console.log('init savePath:', savePath.value)
 
-// 開始爬取函數，使用 invoke 與主進程的 ipcMain.handle 對應
+// Start scraping function, using invoke to correspond with ipcMain.handle in main process
 const startScraping = async (forceAppend = false) => {
-  console.log('startScraping 觸發')
+  console.log('startScraping triggered')
   console.log('urls.value:', urls.value)
   console.log('append mode:', forceAppend || appendMode.value)
 
@@ -125,35 +125,35 @@ const startScraping = async (forceAppend = false) => {
     return
   }
 
-  // 將輸入的 URL 拆分成陣列
+  // Split input URLs into array
   const urlList = urls.value.split('\n').filter(url => url.trim())
 
-  // 開始爬取前立即顯示 loading 狀態
+  // Show loading state immediately before scraping
   urlInputRef.value?.setLoading(true)
 
   try {
-    // 執行 invoke，若成功則代表爬取開始
+    // Execute invoke, success means scraping has started
     const result = await window.electron.invoke('start-scraping', {
       urls: urlList,
       savePath: savePath.value,
       append: forceAppend || appendMode.value
     })
     
-    // 檢查結果，如果成功則顯示成功訊息並停止加載狀態
+    // Check result, if successful show success message and stop loading state
     if (result && result.success) {
-      console.log('爬取成功，結果：', result)
+      console.log('Scraping successful, result:', result)
       urlInputRef.value?.setLoading(false)
       ElMessage.success('爬取完成')
     }
   } catch (error: any) {
-    console.error('爬取發生錯誤：', error)
-    // 發生錯誤時停止 loading 狀態並顯示錯誤提示
+    console.error('Scraping error:', error)
+    // Stop loading state and show error message when error occurs
     urlInputRef.value?.setLoading(false)
     ElMessage.error(`爬取發生錯誤：${error.message}`)
   }
 }
 
-// 切換定時任務，注意使用 scheduleSettings.value
+// Toggle scheduled task, note using scheduleSettings.value
 const toggleSchedule = () => {
   if (!isScheduleRunning.value) {
     if (!urls.value.trim()) {
@@ -169,47 +169,47 @@ const toggleSchedule = () => {
   }
 }
 
-// 清空日誌
+// Clear logs
 const clearLogs = () => {
   logs.value = []
 }
 
-// 存儲 URLs
+// Store URLs
 const saveUrls = () => {
   window.electron.send('save-urls', urls.value)
 }
 
-// 存儲定時設置
+// Store schedule settings
 const saveScheduleSettings = () => {
   window.electron.send('save-schedule-settings', { ...scheduleSettings.value })
 }
 
-// 監聽儲存路徑的變化
+// Watch for save path changes
 watch(savePath, (newValue, oldValue) => {
-  // 只有當值真正改變時才保存
+  // Only save when value actually changes
   if (newValue !== oldValue) {
     console.log('Save path changed:', { newValue, oldValue })
     saveSavePath()
   }
 })
 
-// 修改 saveSavePath 函數
+// Modified saveSavePath function
 const saveSavePath = () => {
   console.log('Saving path:', savePath.value)
   window.electron.send('save-save-path', savePath.value)
 }
 
-// 在啟動時讀取之前保存的 URLs 和定時設置
+// Load previously saved URLs and schedule settings on startup
 onMounted(async () => {
   try {
-    // 讀取已保存的 URLs
+    // Load saved URLs
     urls.value = await window.electron.invoke('load-urls')
     
-    // 讀取已保存的定時設置
+    // Load saved schedule settings
     const savedSettings = await window.electron.invoke('load-schedule-settings')
     scheduleSettings.value = savedSettings
     
-    // 讀取已保存的儲存路徑
+    // Load saved save path
     const savedPath = await window.electron.invoke('load-save-path')
     console.log('Loaded save path:', savedPath)
     savePath.value = savedPath
@@ -225,7 +225,7 @@ onMounted(async () => {
   })
   
   window.electron.on('scraping-complete', () => {
-    console.log('收到 scraping-complete 事件')
+    console.log('Received scraping-complete event')
     urlInputRef.value?.setLoading(false)
     ElMessage.success('爬取完成')
   })
@@ -236,20 +236,20 @@ onMounted(async () => {
   })
   
   window.electron.on('schedule-trigger', () => {
-    console.log('收到 schedule-trigger 事件');
-    // 檢查 urls 是否還存在
+    console.log('Received schedule-trigger event');
+    // Check if urls still exists
     console.log('urls.value:', urls.value);
-    // 定時任務觸發時使用 appendMode 值，如果為 false 則強制使用 true
-    console.log('定時任務使用的附加模式:', appendMode.value ? '開啟' : '強制開啟');
-    startScraping(true); // 定時任務總是使用附加模式
+    // Scheduled task uses appendMode value, if false then force to true
+    console.log('Scheduled task append mode:', appendMode.value ? 'enabled' : 'forced enabled');
+    startScraping(true); // Scheduled tasks always use append mode
   })
   
-  // 監聽下次執行時間的更新
+  // Listen for next run time updates
   window.electron.on('next-run-time', (time: string) => {
     nextRunTime.value = time
   })
 
-  // 當關閉應用前保存所有設置
+  // Save all settings before application closes
   window.addEventListener('beforeunload', () => {
     saveUrls()
     saveScheduleSettings()
@@ -257,12 +257,12 @@ onMounted(async () => {
   })
 })
 
-// 監聽定時設置的變化
+// Watch for schedule settings changes
 watch(scheduleSettings, () => {
   saveScheduleSettings()
 }, { deep: true })
 
-// 清除監聽事件
+// Clean up event listeners
 onUnmounted(() => {
   window.electron.removeAllListeners('log-message')
   window.electron.removeAllListeners('scraping-complete')
@@ -278,7 +278,7 @@ onUnmounted(() => {
 </script>
 
 <style>
-/* 全局樣式 */
+/* Global styles */
 :root {
   --primary-color: #2b85e4;
   --primary-light: #5cadff;
@@ -297,7 +297,7 @@ onUnmounted(() => {
   --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* 容器樣式 */
+/* Container styles */
 .app-container {
   min-height: 100vh;
   background-color: #f5f7fa;
@@ -321,7 +321,7 @@ onUnmounted(() => {
   z-index: 0;
 }
 
-/* 頂部標題欄 */
+/* Header bar */
 .app-header {
   background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
   color: white;
@@ -354,7 +354,7 @@ onUnmounted(() => {
   border-radius: 12px;
 }
 
-/* 主要內容區域 */
+/* Main content area */
 .main-content {
   padding: 24px;
   max-width: 1200px;
@@ -365,10 +365,10 @@ onUnmounted(() => {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
   position: relative;
   z-index: 1;
-  overflow-x: hidden; /* 防止內容溢出導致版型變寬 */
+  overflow-x: hidden; /* Prevent content overflow causing layout to widen */
 }
 
-/* 卡片樣式 */
+/* Card styles */
 .section-card {
   margin-bottom: 24px;
   border-radius: 12px;
@@ -407,7 +407,7 @@ onUnmounted(() => {
   gap: 8px;
 }
 
-/* 日誌卡片特殊樣式 */
+/* Log card special styles */
 .log-card .el-card__body {
   padding: 0;
   height: auto;
@@ -415,7 +415,7 @@ onUnmounted(() => {
   background: #1e1e1e;
 }
 
-/* 底部版權資訊 */
+/* Footer with copyright info */
 .app-footer {
   text-align: center;
   padding: 20px;
@@ -446,7 +446,7 @@ onUnmounted(() => {
   background-color: #dcdee2;
 }
 
-/* 響應式設計 */
+/* Responsive design */
 @media (max-width: 768px) {
   .main-content {
     padding: 16px;
@@ -484,7 +484,7 @@ onUnmounted(() => {
   }
 }
 
-/* 统一按钮样式 */
+/* Unified button styles */
 :deep(.el-button) {
   border-radius: 8px;
   font-weight: 500;
@@ -508,7 +508,7 @@ onUnmounted(() => {
   font-size: 16px;
 }
 
-/* 主要按钮样式 */
+/* Primary button styles */
 :deep(.el-button--primary) {
   background-color: var(--primary-color);
   border-color: transparent;
@@ -521,7 +521,7 @@ onUnmounted(() => {
   box-shadow: 0 4px 12px rgba(43, 133, 228, 0.25);
 }
 
-/* 次要按钮样式 */
+/* Default button styles */
 :deep(.el-button--default) {
   border-color: #dcdee2;
   color: var(--text-regular);
@@ -533,7 +533,7 @@ onUnmounted(() => {
   color: var(--primary-color);
 }
 
-/* 信息按钮样式 */
+/* Info button styles */
 :deep(.el-button--info) {
   background-color: #909399;
   border-color: transparent;
@@ -546,13 +546,13 @@ onUnmounted(() => {
   box-shadow: 0 4px 12px rgba(144, 147, 153, 0.25);
 }
 
-/* 卡片头部按钮样式 */
+/* Card header button styles */
 .card-header .el-button {
   padding: 8px 14px;
   font-size: 14px;
 }
 
-/* 禁用状态样式 */
+/* Disabled state styles */
 :deep(.el-button:disabled) {
   opacity: 0.6;
   cursor: not-allowed;

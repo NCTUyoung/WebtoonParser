@@ -7,13 +7,32 @@ export default defineConfig({
   main: {
     build: {
       rollupOptions: {
-        input: {
-          index: 'src/main/index.js',
-          webtoon: 'src/main/webtoon.js'
+        input: [
+          'src/main/core/index.js',
+          'src/main/core/config.js',
+          'src/main/managers/window-manager.js',
+          'src/main/utils/logger.js',
+          'src/main/scraper/scraping-manager.js',
+          'src/main/managers/schedule-manager.js',
+          'src/main/managers/storage-manager.js',
+          'src/main/managers/file-manager.js',
+          'src/main/managers/navigation-manager.js',
+          'src/main/scraper/webtoon-scraper.js',
+          'src/main/scraper/excel-manager.js',
+          'src/main/utils/file-helper.js',
+          'src/main/scraper/request-throttler.js',
+          'src/main/utils/utils.js',
+          'src/main/scraper/webtoon-module.js'
+        ],
+        output: {
+          format: 'cjs',
+          preserveModules: true,
+          preserveModulesRoot: 'src',
+          entryFileNames: '[name].js'
         },
         external: ['electron-store']
       },
-      outDir: 'out/main',
+      outDir: 'out'
     }
   },
   preload: {
