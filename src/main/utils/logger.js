@@ -4,9 +4,34 @@
  */
 
 const iconv = require('iconv-lite')
+const windowManager = require('../managers/window-manager')
 
 /**
- * Log a message to console and optionally send to renderer process
+ * 发送日志消息到前端
+ * @param {string} message - 要发送的日志消息
+ * @param {Object} [event] - 可选的事件对象，包含sender属性
+ */
+function sendToRenderer(message, event) {
+  // 如果提供了event并且有sender属性，直接使用它发送
+  if (event && event.sender) {
+    event.sender.send('log-message', message)
+    return
+  }
+  
+  // 否则尝试通过主窗口发送
+  const mainWindow = windowManager.getMainWindow()
+  if (mainWindow && mainWindow.webContents) {
+    try {
+      mainWindow.webContents.send('log-message', message)
+    } catch (e) {
+      // 如果发送失败，只在控制台记录错误，不进一步处理
+      console.error('Error sending log to renderer:', e.message)
+    }
+  }
+}
+
+/**
+ * Log a message to console and send to renderer process
  * @param {string} message - Message to log
  * @param {Object} [event] - Event object containing sender property, used to send message to renderer process
  */
@@ -23,27 +48,37 @@ function logMessage(message, event) {
     console.log(message)
   }
   
-  // If event parameter is provided, send message to frontend
-  if (event && event.sender) {
-    event.sender.send('log-message', message)
-  }
+  // 总是尝试发送到前端
+  sendToRenderer(message, event)
+}
+
+/**
+ * Log an error message to console and send to renderer process
+ * @param {string} message - Error message to log
+ * @param {Object} [event] - Event object containing sender property, used to send message to renderer process
+ */
+function logError(message, event) {
+  // 在控制台中使用红色标记错误
+  console.error(`[ERROR] ${message}`)
+  
+  // 发送到前端时添加错误标记
+  sendToRenderer(`[錯誤] ${message}`, event)
 }
 
 /**
  * Create a scoped logger that sends logs to both console and renderer process
  * @param {Object} [event] - Event object containing sender property, used to send message to renderer process
- * @returns {Function} Log recording function that accepts message parameter
+ * @returns {Object} Log functions: log, error
  */
 function createScopedLogger(event) {
-  return (message) => {
-    logMessage(message)
-    if (event && event.sender) {
-      event.sender.send('log-message', message)
-    }
+  return {
+    log: (message) => logMessage(message, event),
+    error: (message) => logError(message, event)
   }
 }
 
 module.exports = {
   logMessage,
+  logError,
   createScopedLogger
 } 

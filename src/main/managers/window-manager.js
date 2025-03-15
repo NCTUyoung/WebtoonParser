@@ -25,7 +25,10 @@ function createWindow(isDev) {
     height: config.app.window.height,
     webPreferences: {
       ...config.app.window.webPreferences,
-      preload: path.join(__dirname, '../../preload/index.js')
+      preload: path.join(__dirname, '../../preload/index.js'),
+      // 允許加載本地資源
+      webSecurity: false,
+      allowRunningInsecureContent: true
     },
     // Additional settings to help with blurry UI
     backgroundColor: '#ffffff', // Prevents white flicker

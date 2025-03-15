@@ -30,20 +30,75 @@ function addDpiFixingStyles() {
 // Initialize DPI fixes
 addDpiFixingStyles()
 
+// Expose protected methods that allow the renderer process to use
+// the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electron', {
-  startScraping: (url) => ipcRenderer.invoke('start-scraping', url),
-  send: (channel, data) => ipcRenderer.send(channel, data),
-  invoke: (channel, data) => ipcRenderer.invoke(channel, data),
-  on: (channel, callback) => {
-    ipcRenderer.removeAllListeners(channel)
-    ipcRenderer.on(channel, (event, ...args) => callback(...args))
+  // Send messages to main process
+  send: (channel, data) => {
+    // Whitelist channels
+    const validChannels = [
+      'save-urls',
+      'save-schedule-settings',
+      'start-schedule',
+      'stop-schedule',
+      'save-save-path',
+      'open-external-link',
+      'save-background-settings',
+      'save-url-history'
+    ]
+    if (validChannels.includes(channel)) {
+      ipcRenderer.send(channel, data)
+    }
+  },
+  
+  // Invoke methods and receive response
+  invoke: (channel, data) => {
+    const validChannels = [
+      'start-scraping',
+      'load-urls',
+      'load-schedule-settings',
+      'load-save-path',
+      'select-directory',
+      'load-background-settings',
+      'upload-background-image',
+      'reset-background-image',
+      'load-url-history'
+    ]
+    if (validChannels.includes(channel)) {
+      return ipcRenderer.invoke(channel, data)
+    }
     
-    return () => {
+    return Promise.reject(new Error(`未授權調用通道 "${channel}"`))
+  },
+  
+  // Register event listeners
+  on: (channel, callback) => {
+    const validChannels = [
+      'log-message',
+      'scraping-complete',
+      'scraping-error',
+      'schedule-trigger',
+      'next-run-time'
+    ]
+    if (validChannels.includes(channel)) {
+      // Deliberately strip event as it includes `sender` 
+      ipcRenderer.on(channel, (event, ...args) => callback(...args))
+    }
+  },
+  
+  // Remove all listeners for a channel
+  removeAllListeners: (channel) => {
+    const validChannels = [
+      'log-message',
+      'scraping-complete',
+      'scraping-error',
+      'schedule-trigger',
+      'next-run-time'
+    ]
+    if (validChannels.includes(channel)) {
       ipcRenderer.removeAllListeners(channel)
     }
   },
-  removeAllListeners: (channel) => {
-    ipcRenderer.removeAllListeners(channel)
-  },
+  
   platform: process.platform
 })

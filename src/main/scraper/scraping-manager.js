@@ -20,7 +20,7 @@ function registerScrapingHandlers(isTest) {
         throw new Error('未提供有效URL')
       }
   
-      const log = logger.createScopedLogger(event)
+      const log = logger.createScopedLogger(event).log
       log(`开始爬取URL: ${urlList.join(', ')}${append ? ' (附加模式)' : '(覆盖模式)'}`)
       
       // 按顺序处理每个URL
@@ -34,7 +34,7 @@ function registerScrapingHandlers(isTest) {
       event.sender.send('scraping-complete')
       return { success: true }
     } catch (error) {
-      logger.logMessage(`爬取过程中出错: ${error.message}`)
+      logger.logError(`爬取过程中出错: ${error.message}`)
       event.sender.send('scraping-error', `错误: ${error.message}`)
       return { success: false, error: error.message }
     }
