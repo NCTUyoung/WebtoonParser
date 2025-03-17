@@ -23,12 +23,13 @@
     </template>
     
     <div class="dialog-content">
-      <!-- Optimized search and action area layout -->
+      <!-- 智能輸入區：搜索/新增網址 -->
       <div class="search-bar">
         <el-input
-          v-model="searchQuery"
+          v-model="inputValue"
           placeholder="搜索網址或標籤..."
           clearable
+          @keyup.enter="handleEnterKey"
         >
           <template #prefix>
             <el-icon><Search /></el-icon>
@@ -37,57 +38,22 @@
         
         <div class="quick-actions">
           <el-button
-            @click="importFromClipboard"
-            type="primary"
-            size="small"
-            text
-          >
-            <el-icon><DocumentCopy /></el-icon> 從剪貼板導入
-          </el-button>
-          <el-divider direction="vertical" />
-          <el-button
-            @click="showAddUrlForm"
+            @click="tryAddCurrentInput"
             type="primary"
             size="small"
           >
-            <el-icon><Plus /></el-icon> 新增
+            <el-icon><Plus /></el-icon> 添加此網址
           </el-button>
-        </div>
-      </div>
-      
-      <!-- Simple URL input form -->
-      <div v-if="showAddForm" class="add-url-form">
-        <el-input
-          v-model="newUrlForm.url"
-          placeholder="輸入網址"
-          clearable
-          @input="validateUrl"
-        >
-          <template #append>
-            <el-input
-              v-model="newUrlForm.label"
-              placeholder="標籤名稱"
-              style="width: 120px"
-            />
-            <el-button
-              @click="confirmAddUrl"
-              :disabled="!!newUrlForm.error || !newUrlForm.url"
-              type="primary"
-            >
-              添加
-            </el-button>
-          </template>
-        </el-input>
-        
-        <div v-if="newUrlForm.error" class="error-message">
-          {{ newUrlForm.error }}
+          <div v-if="errorMessage" class="error-message">
+            {{ errorMessage }}
+          </div>
         </div>
       </div>
       
       <!-- URL table -->
       <url-table
         :data="urlHistory"
-        :search-query="searchQuery"
+        :search-query="inputValue"
         @update:data="updateUrlHistory"
         @delete-item="confirmDelete"
         @open-url="openExternalUrl"
@@ -115,10 +81,10 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Document, Search, DocumentCopy, Plus, Check, Close } from '@element-plus/icons-vue'
+import { Document, Search, Plus, Check, Close } from '@element-plus/icons-vue'
 import UrlTable from './UrlTable.vue'
 import DeleteConfirmDialog from './DeleteConfirmDialog.vue'
-import { isValidUrl, formatUrl, extractUrlsFromText, generateLabelFromUrl } from '@/utils/urlUtils'
+import { isValidUrl, formatUrl, generateLabelFromUrl } from '@/utils/urlUtils'
 
 interface HistoryItem {
   url: string
@@ -153,34 +119,82 @@ const dialogVisible = computed({
 // URL history records
 const urlHistory = ref<HistoryItem[]>([...props.history])
 
-// Search query
-const searchQuery = ref('')
+// 統一輸入欄位
+const inputValue = ref('')
+const errorMessage = ref('')
 
 // Auto-save status
 const autoSaveStatus = ref(false)
 
-// Add URL form display control
-const showAddForm = ref(false)
-
 // Add URL form data
 const newUrlForm = ref({
-  url: '',
-  label: '',
-  error: ''
+  label: ''
 })
 
 // Delete confirmation dialog
 const deleteConfirmVisible = ref(false)
 const itemToDelete = ref<HistoryItem | null>(null)
 
-// Show add URL form
-const showAddUrlForm = () => {
-  showAddForm.value = true
-  newUrlForm.value = {
-    url: '',
-    label: '',
-    error: ''
+// 嘗試添加當前輸入
+const tryAddCurrentInput = () => {
+  if (!inputValue.value) {
+    errorMessage.value = '請輸入網址'
+    setTimeout(() => {
+      errorMessage.value = ''
+    }, 3000)
+    return
   }
+  
+  const formattedUrl = formatUrl(inputValue.value)
+  
+  if (!isValidUrl(formattedUrl)) {
+    errorMessage.value = '請輸入有效的網址'
+    setTimeout(() => {
+      errorMessage.value = ''
+    }, 3000)
+    return
+  }
+  
+  // 檢查是否已存在
+  if (urlHistory.value.some(item => item.url === formattedUrl)) {
+    errorMessage.value = '該網址已存在於列表中'
+    setTimeout(() => {
+      errorMessage.value = ''
+    }, 3000)
+    return
+  }
+  
+  // 生成默認標籤
+  const label = generateLabelFromUrl(formattedUrl)
+  
+  // 添加新URL
+  addUrl(formattedUrl, label)
+}
+
+// 處理按Enter鍵 - 如果是有效URL就添加，否則執行搜索
+const handleEnterKey = () => {
+  const formattedUrl = formatUrl(inputValue.value)
+  if (isValidUrl(formattedUrl) && !urlHistory.value.some(item => item.url === formattedUrl)) {
+    tryAddCurrentInput()
+  }
+  // 如果不是有效URL或已存在，Enter鍵默認行為就是搜索
+}
+
+// 添加URL到歷史記錄
+const addUrl = (url: string, label: string) => {
+  const newItem = {
+    url,
+    label
+  }
+  
+  urlHistory.value = [...urlHistory.value, newItem]
+  ElMessage.success('網址已添加')
+  
+  // 清空輸入和錯誤
+  inputValue.value = ''
+  errorMessage.value = ''
+  
+  autoSave()
 }
 
 // Close dialog
@@ -222,84 +236,6 @@ const showAutoSaveStatus = () => {
   setTimeout(() => {
     autoSaveStatus.value = false
   }, 3000)
-}
-
-// Import from clipboard
-const importFromClipboard = async () => {
-  try {
-    const text = await navigator.clipboard.readText()
-    const urls = extractUrlsFromText(text)
-    
-    if (urls.length === 0) {
-      ElMessage.warning('剪貼板中未找到有效網址')
-      return
-    }
-    
-    // Filter out existing URLs
-    const newUrls = urls.filter((url: string) => !urlHistory.value.some(item => item.url === url))
-    
-    if (newUrls.length === 0) {
-      ElMessage.warning('所有網址已存在於列表中')
-      return
-    }
-    
-    // Add new URLs
-    const newItems = newUrls.map((url: string) => ({
-      url,
-      label: generateLabelFromUrl(url)
-    }))
-    
-    urlHistory.value = [...urlHistory.value, ...newItems]
-    ElMessage.success(`已導入 ${newItems.length} 個網址`)
-    autoSave()
-  } catch (error) {
-    ElMessage.error('無法讀取剪貼板內容')
-  }
-}
-
-// Validate URL
-const validateUrl = () => {
-  if (!newUrlForm.value.url) {
-    newUrlForm.value.error = ''
-    return
-  }
-  
-  const formattedUrl = formatUrl(newUrlForm.value.url)
-  
-  if (!isValidUrl(formattedUrl)) {
-    newUrlForm.value.error = '請輸入有效的網址'
-  } else if (urlHistory.value.some(item => item.url === formattedUrl)) {
-    newUrlForm.value.error = '該網址已存在於列表中'
-  } else {
-    newUrlForm.value.error = ''
-    newUrlForm.value.url = formattedUrl
-  }
-}
-
-// Confirm adding URL
-const confirmAddUrl = () => {
-  validateUrl()
-  
-  if (newUrlForm.value.error || !newUrlForm.value.url) {
-    return
-  }
-  
-  const newItem = {
-    url: newUrlForm.value.url,
-    label: newUrlForm.value.label || generateLabelFromUrl(newUrlForm.value.url)
-  }
-  
-  urlHistory.value = [...urlHistory.value, newItem]
-  ElMessage.success('網址已添加')
-  
-  // Reset form
-  newUrlForm.value = {
-    url: '',
-    label: '',
-    error: ''
-  }
-  
-  autoSave()
 }
 
 // Confirm delete
@@ -380,17 +316,6 @@ watch(() => props.history, (newHistory) => {
   display: flex;
   align-items: center;
   white-space: nowrap;
-}
-
-/* Simple URL input form */
-.add-url-form {
-  margin-bottom: 12px;
-}
-
-.error-message {
-  color: #f56c6c;
-  font-size: 12px;
-  margin-top: 4px;
 }
 
 /* Simplified footer status bar */
