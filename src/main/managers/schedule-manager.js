@@ -34,7 +34,7 @@ function registerScheduleHandlers(isTest) {
     const shouldTriggerImmediately = shouldRunImmediately(scheduleType, now, scheduledTime, rule, isTest)
     
     if (shouldTriggerImmediately) {
-      logger.logMessage('Plan time has passed or is in test mode, execute immediately', event)
+      logger.logMessage('符合立即執行條件(每週排程時間已過或測試模式)，立即執行一次', event)
       // Immediately trigger, then set scheduled task
       const mainWindow = windowManager.getMainWindow()
       if (mainWindow) {
@@ -122,8 +122,7 @@ function createScheduledTime(hour, minute) {
  * @returns {boolean} Whether to run immediately
  */
 function shouldRunImmediately(scheduleType, now, scheduledTime, rule, isTest) {
-  return (scheduleType === 'daily' && now > scheduledTime) || 
-         (scheduleType === 'weekly' && now.getDay() === rule.dayOfWeek && now > scheduledTime) || 
+  return (scheduleType === 'weekly' && now.getDay() === rule.dayOfWeek && now > scheduledTime) || 
          (isTest && process.env.IMMEDIATE_TRIGGER === 'true')
 }
 
