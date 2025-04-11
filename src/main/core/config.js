@@ -38,18 +38,46 @@ const config = {
   
   // Selector configuration
   selectors: {
-    title: 'h1.subj',
-    author: '.author_area',
-    authorAlternative: ['.author_area .author', '.author_area .author_name'],
-    views: '.grade_area .ico_view + em.cnt',
-    subscribers: '.grade_area .ico_subscribe + em.cnt',
-    rating: '.grade_area .ico_grade5 + em.cnt',
-    updateDay: ['.day_info', '.date:first'],
-    summary: 'p.summary',
-    episodeItem: '._episodeItem',
-    pagination: '.paginate',
-    nextPage: 'a.pg_next',
-    prevPage: 'a.pg_prev'
+    webtoon: {
+        title: 'h1.subj',
+        author: '.author_area',
+        authorAlternative: ['.author_area .author', '.author_area .author_name'],
+        views: '.grade_area .ico_view + em.cnt',
+        subscribers: '.grade_area .ico_subscribe + em.cnt',
+        rating: '.grade_area .ico_grade5 + em.cnt',
+        updateDay: ['.day_info', '.date:first'],
+        summary: 'p.summary',
+        episodeItem: '._episodeItem',
+        pagination: '.paginate',
+        nextPage: 'a.pg_next',
+        prevPage: 'a.pg_prev',
+        episodeNumber: '.tx',
+        episodeTitle: '.subj span',
+        episodeDate: '.date',
+        episodeLikes: '.like_area'
+    },
+    kadokado: {
+        title: 'h1.css-13pwcqv',
+        author: '.css-ykwscm .css-1udy97n a',
+        description: '#introduction .css-hs30jl',
+        likes: '.css-13r89do .css-fyb2z6 .css-19vsh96',
+        views: '.css-13r89do .css-1uju5dn .css-19vsh96',
+        status: '#chapter .css-1upcx53:nth-child(1) .css-4cffwv:nth-child(1) .css-vurnku',
+        totalChapters: '#chapter .css-1upcx53:nth-child(2) .css-4cffwv:nth-child(1) .css-vurnku',
+        totalWords: '#chapter .css-1upcx53:nth-child(1) .css-4cffwv:nth-child(2) .css-vurnku',
+        chapterListContainer: '#chapter .css-17dn726',
+        chapterItem: 'ul.css-17dn726 > li.css-vurnku',
+        chapterLink: 'a.css-lz56cq',
+        chapterTitle: 'h4.css-egx0he',
+        chapterUpdateDate: '.css-l8h7m9 > span.css-vurnku',
+        chapterWords: '.css-18ww83x svg[viewBox="0 0 16 16"] + .css-vurnku'
+    }
+  },
+
+  // Site URL patterns
+  siteUrlPatterns: {
+    webtoon: /https:\/\/www\.webtoons\.com\/.*\/(?:list\?title_no=|viewer\?title_no=)/,
+    kadokado: /https:\/\/www\.kadokado\.com\.tw\/book\/\d+/
   },
 
   // Application configuration

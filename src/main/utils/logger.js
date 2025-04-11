@@ -66,6 +66,32 @@ function logError(message, event) {
 }
 
 /**
+ * Log an info message to console and send to renderer process
+ * @param {string} message - Info message to log
+ * @param {Object} [event] - Event object containing sender property, used to send message to renderer process
+ */
+function logInfo(message, event) {
+  // 在控制台中记录信息
+  console.log(`[INFO] ${message}`)
+  
+  // 发送到前端
+  sendToRenderer(`[信息] ${message}`, event)
+}
+
+/**
+ * Log a warning message to console and send to renderer process
+ * @param {string} message - Warning message to log
+ * @param {Object} [event] - Event object containing sender property, used to send message to renderer process
+ */
+function logWarning(message, event) {
+  // 在控制台中使用黄色标记警告
+  console.warn(`[WARN] ${message}`)
+  
+  // 发送到前端时添加警告标记
+  sendToRenderer(`[警告] ${message}`, event)
+}
+
+/**
  * Create a scoped logger that sends logs to both console and renderer process
  * @param {Object} [event] - Event object containing sender property, used to send message to renderer process
  * @returns {Object} Log functions: log, error
@@ -73,12 +99,16 @@ function logError(message, event) {
 function createScopedLogger(event) {
   return {
     log: (message) => logMessage(message, event),
+    info: (message) => logInfo(message, event),
+    warn: (message) => logWarning(message, event),
     error: (message) => logError(message, event)
   }
 }
 
 module.exports = {
   logMessage,
+  logInfo,
+  logWarning,
   logError,
   createScopedLogger
 } 

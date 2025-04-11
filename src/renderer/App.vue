@@ -350,7 +350,7 @@ const startScraping = async (forceAppend = false) => {
     const result = await window.electron.invoke('start-scraping', {
       urls: urlList,
       savePath: savePath.value,
-      append: forceAppend || appendMode.value,
+      appendMode: forceAppend || appendMode.value,
       customFilename: customFilename.value
     })
     

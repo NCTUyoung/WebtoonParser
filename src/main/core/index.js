@@ -18,14 +18,14 @@ app.commandLine.appendSwitch('force-device-scale-factor', '1')
 // Import modules
 const windowManager = require('../managers/window-manager')
 const logger = require('../utils/logger')
-const scrapingManager = require('../scraper/scraping-manager')
+const scrapingManager = require('../managers/scraping-manager')
 const scheduleManager = require('../managers/schedule-manager')
 const storageManager = require('../managers/storage-manager')
 const fileManager = require('../managers/file-manager')
 const navigationManager = require('../managers/navigation-manager')
 
 // Constants
-const isDev = process.env.NODE_ENV === 'development'
+const isDev = process.env.NODE_ENV !== 'production'
 const isTest = process.env.NODE_ENV === 'test'
 process.env.LANG = config.app.defaultLocale
 

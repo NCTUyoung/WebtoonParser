@@ -17,6 +17,9 @@ class WebtoonScraper {
     this.log = logFunction || Utils.createDefaultLogger()
     this.excelManager = new ExcelManager(this.log)
     
+    // 储存选择器
+    this.selectors = config.selectors.webtoon;
+    
     // Create request throttlers
     this.pageThrottler = new RequestThrottler(
       config.scraper.minPageDelay,
@@ -72,7 +75,7 @@ class WebtoonScraper {
     const html = await this.getPage(this.getUrl(1))
     const $ = cheerio.load(html)
     
-    let author = $(config.selectors.author)
+    let author = $(this.selectors.author)
       .clone()
       .children()
       .remove()
@@ -81,7 +84,7 @@ class WebtoonScraper {
       .trim()
     
     if (!author) {
-      for (const selector of config.selectors.authorAlternative) {
+      for (const selector of this.selectors.authorAlternative) {
         author = $(selector).text().trim()
         if (author) break
       }
@@ -93,14 +96,14 @@ class WebtoonScraper {
     }
     
     const info = {
-      title: $(config.selectors.title).text().trim(),
+      title: $(this.selectors.title).text().trim(),
       author: author,
-      views: $(config.selectors.views).text().trim(),
-      subscribers: $(config.selectors.subscribers).text().trim(),
-      rating: $(config.selectors.rating).text().trim(),
-      updateDay: $(config.selectors.updateDay[0]).text().trim() || 
-                $(config.selectors.updateDay[1]).text().trim(),
-      summary: $(config.selectors.summary).text().trim(),
+      views: $(this.selectors.views).text().trim(),
+      subscribers: $(this.selectors.subscribers).text().trim(),
+      rating: $(this.selectors.rating).text().trim(),
+      updateDay: $(this.selectors.updateDay[0]).text().trim() || 
+                $(this.selectors.updateDay[1]).text().trim(),
+      summary: $(this.selectors.summary).text().trim(),
       scrapedAt: new Date().toISOString()
     }
 
@@ -152,7 +155,7 @@ class WebtoonScraper {
       const chapters = []
       const $page = cheerio.load(html)
       
-      $page(config.selectors.episodeItem).each((_, el) => {
+      $page(this.selectors.episodeItem).each((_, el) => {
         const $item = $page(el)
         const number = $item.find('.tx').text().trim()
         
@@ -187,7 +190,7 @@ class WebtoonScraper {
           const html = await this.getPage(currentUrl)
           const $ = cheerio.load(html)
           
-          const pagination = $(config.selectors.pagination)
+          const pagination = $(this.selectors.pagination)
           if (!pagination.length) break
           
           // Extract page numbers from pagination
@@ -249,8 +252,8 @@ class WebtoonScraper {
   
   async _getNextPageUrl($, pagination) {
     try {
-      const nextGroup = pagination.find(config.selectors.nextPage)
-      const prevGroup = pagination.find(config.selectors.prevPage)
+      const nextGroup = pagination.find(this.selectors.nextPage)
+      const prevGroup = pagination.find(this.selectors.prevPage)
       const navLink = nextGroup.length ? nextGroup : prevGroup
       
       if (!navLink.length) return null
@@ -280,8 +283,16 @@ class WebtoonScraper {
     return `${this.baseUrl}?title_no=${this.titleNo}&page=${page}`
   }
   
-  async saveToExcel(info, chapters, externalSavePath, append = false) {
-    return await this.excelManager.saveToExcel(info, chapters, externalSavePath, append)
+  async saveToExcel(info, chapters, externalSavePath, append = false, customFilename) {
+    this.log(`Saving Webtoon data to Excel...`)
+    try {
+      const filePath = await this.excelManager.saveWorkbook(info, chapters, externalSavePath, append, false, customFilename)
+      this.log(`Excel file saved to: ${filePath}`)
+      return filePath
+    } catch (error) {
+      this.log(`Error saving to Excel: ${error.message}`, 'error')
+      throw error
+    }
   }
 }
 

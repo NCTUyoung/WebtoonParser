@@ -21,6 +21,7 @@
             filterable
             :loading="loadingFiles"
             @change="handleExistingFileSelect"
+            @focus="refreshFileList"
             class="existing-file-select"
             no-data-text="目錄中無 Excel 文件或無法讀取"
           >
@@ -29,6 +30,7 @@
               :key="file"
               :label="file"
               :value="file"
+              @click="refreshFileList"
             />
           </el-select>
           
@@ -165,6 +167,12 @@ const handleExistingFileSelect = (selectedFile: string | number | boolean | Reco
   if (fileStr) {
     const filenameWithoutExt = fileStr.replace(/\.xlsx$/i, '')
     emit('update:filename', filenameWithoutExt)
+  }
+}
+
+const refreshFileList = () => {
+  if (displayPath.value) {
+    fetchExistingFiles(displayPath.value)
   }
 }
 

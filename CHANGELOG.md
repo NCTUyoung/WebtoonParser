@@ -1,9 +1,32 @@
 # 更新日誌
 
+## [2.0.3] - YYYY-MM-DD
+### Added
+- Added support for scraping novel data from KadoKado (kadokado.com.tw).
+- Scraping manager now detects site type (Webtoon or KadoKado) based on URL.
+- Excel output adjusted for novel data (e.g., using word count instead of likes, different info columns).
+
+## [2.0.2] - 2024-07-27
+
+### 新增
+- **自定義文件名**: 允許用戶在儲存設置中輸入自定義的 Excel 文件名 (不含擴展名)。
+- **列出現有文件**: 在儲存設置中添加下拉菜單，顯示選定目錄下已存在的 `.xlsx` 文件，方便用戶選擇現有文件進行覆蓋或附加。
+
+### 改進
+- **文件名邏輯**: 優化 Excel 文件名生成邏輯，優先級為：用戶自定義文件名 > 附加模式下的固定文件名 (`webtoon_stats_daily_append.xlsx`) > 默認帶日期的文件名。
+- **文件處理**: 增強了讀取目錄、讀寫 Excel 文件時的錯誤處理和日誌記錄 (包括權限錯誤)。
+- **附加模式**: 確保附加模式在定時任務觸發時，能持續寫入同一個固定名稱的文件。
+
+### 修復
+- **安全警告**: 修正了 Electron 的 `webSecurity` 和 `allowRunningInsecureContent` 安全警告，恢復為更安全的默認設置。
+- **Element Plus 用法**: 將 `el-button` 的 `type="text"` 用法更正為 `link` 布爾屬性，以符合當前 Element Plus 版本規範。
+- **日誌錯誤**: 修復了 `file-manager.js` 中因調用不存在的 `logger.logInfo` 方法而導致的 TypeError。
+
 ## [2.0.1] - 2024-07-27
 
 ### 重構
 - 清理項目：移除了用於生成專案分析圖表和報告的 Python 腳本及其輸出文件（例如 `generate_all_diagrams.py`, `*.svg`, `*.html` 報告等）。
+- 文檔：將 `techReport.md` 轉換為結構化的 `docs/` 文件夾。詳情請參見 [docs/](./docs/) 目錄。
 
 ## [2.0.0] - 2024-03-10
 

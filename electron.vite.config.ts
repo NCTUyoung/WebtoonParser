@@ -10,9 +10,9 @@ export default defineConfig({
         input: [
           'src/main/core/index.js',
           'src/main/core/config.js',
-          'src/main/managers/window-manager.js',
           'src/main/utils/logger.js',
-          'src/main/scraper/scraping-manager.js',
+          'src/main/managers/window-manager.js',
+          'src/main/managers/scraping-manager.js',
           'src/main/managers/schedule-manager.js',
           'src/main/managers/storage-manager.js',
           'src/main/managers/file-manager.js',
