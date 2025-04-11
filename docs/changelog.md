@@ -4,6 +4,7 @@
 
 ### 重構
 - 清理項目：移除了用於生成專案分析圖表和報告的 Python 腳本及其輸出文件（例如 `generate_all_diagrams.py`, `*.svg`, `*.html` 報告等）。
+- 文檔：將 `techReport.md` 轉換為結構化的 `docs/` 文件夾。
 
 ## [2.0.0] - 2024-03-10
 

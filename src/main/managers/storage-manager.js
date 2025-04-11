@@ -164,6 +164,30 @@ function registerStorageHandlers() {
       throw error
     }
   })
+
+  // Handler for loading custom filename setting
+  ipcMain.handle('load-custom-filename', () => {
+    try {
+      const filename = store.get('customFilename');
+      logger.logInfo(`Loaded custom filename: ${filename === undefined ? '[Not Set]' : filename}`);
+      return filename === undefined ? '' : filename; // 返回空字符串作為默認值
+    } catch (error) {
+      logger.logError('Error loading custom filename:', error);
+      return ''; // 出錯時也返回默認值
+    }
+  });
+
+  // Handler for saving custom filename setting
+  ipcMain.on('save-custom-filename', (event, filename) => {
+    try {
+      // Basic sanitization (remove path separators and invalid chars)
+      const sanitizedFilename = filename ? filename.replace(/[\\\/\:\*\?\"\<\>\|]/g, '').trim() : '';
+      store.set('customFilename', sanitizedFilename);
+      logger.logInfo(`Custom filename saved: ${sanitizedFilename}`);
+    } catch (error) {
+      logger.logError('Error saving custom filename:', error);
+    } 
+  });
 }
 
 /**

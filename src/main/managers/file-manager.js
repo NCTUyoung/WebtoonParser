@@ -4,6 +4,8 @@
  */
 
 const { ipcMain, dialog } = require('electron')
+const fs = require('fs').promises // Use promises API
+const path = require('path')
 const logger = require('../utils/logger')
 const storageManager = require('./storage-manager')
 
@@ -15,15 +17,21 @@ const storageManager = require('./storage-manager')
 function registerFileSystemHandlers(app, isTest) {
   // 目录选择
   ipcMain.handle('select-directory', async () => {
-    const result = await dialog.showOpenDialog({
-      properties: ['openDirectory']
-    })
-    
-    if (!result.canceled) {
-      logger.logMessage('已选择新路径: ' + result.filePaths[0])
-      return result.filePaths[0]
+    try {
+      const result = await dialog.showOpenDialog({
+        properties: ['openDirectory', 'createDirectory']
+      })
+      
+      if (!result.canceled && result.filePaths.length > 0) {
+        logger.logMessage(`Directory selected: ${result.filePaths[0]}`)
+        return result.filePaths[0]
+      }
+      logger.logMessage('Directory selection cancelled.')
+      return null
+    } catch (error) {
+      logger.logError('Error showing open directory dialog:', error)
+      throw error // Re-throw error to be caught by renderer
     }
-    return null
   })
 
   // 保存路径管理
@@ -33,6 +41,38 @@ function registerFileSystemHandlers(app, isTest) {
 
   ipcMain.on('save-save-path', (event, path) => {
     storageManager.saveSavePath(path, event)
+  })
+
+  // Handler for listing Excel files in a directory
+  ipcMain.handle('list-excel-files', async (event, directoryPath) => {
+    if (!directoryPath) {
+      logger.logMessage('list-excel-files: Warning - No directory path provided.')
+      return [] // Return empty array if no path
+    }
+
+    try {
+      logger.logMessage(`Listing Excel files in: ${directoryPath}`)
+      const dirents = await fs.readdir(directoryPath, { withFileTypes: true })
+      const excelFiles = dirents
+        .filter(dirent => dirent.isFile() && dirent.name.toLowerCase().endsWith('.xlsx'))
+        .map(dirent => dirent.name)
+      
+      logger.logMessage(`Found ${excelFiles.length} Excel files.`)
+      return excelFiles
+    } catch (error) {
+      // Log specific error details
+      logger.logError(
+        `Error listing Excel files in ${directoryPath}: Code=${error.code}, Message=${error.message}`,
+        error // Log the full error object as well for stack trace etc.
+      )
+      
+      // Instead of returning [], throw the error so the renderer can catch it
+      // throw new Error(`無法讀取目錄 '${directoryPath}': ${error.message}`); 
+      // Or return an error object for the renderer to handle
+      // For now, we keep returning [] but logging has improved.
+      // A better approach is throwing, which requires renderer changes (Step 2)
+      return [] // Keep returning empty for now, requires frontend change to handle thrown error
+    }
   })
 }
 

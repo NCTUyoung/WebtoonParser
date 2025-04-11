@@ -26,9 +26,9 @@ function createWindow(isDev) {
     webPreferences: {
       ...config.app.window.webPreferences,
       preload: path.join(__dirname, '../../preload/index.js'),
-      // 允許加載本地資源
-      webSecurity: false,
-      allowRunningInsecureContent: true
+      // 恢復安全的默認值
+      // webSecurity: false, // 移除或設為 true
+      // allowRunningInsecureContent: true // 移除或設為 false
     },
     // Additional settings to help with blurry UI
     backgroundColor: '#ffffff', // Prevents white flicker

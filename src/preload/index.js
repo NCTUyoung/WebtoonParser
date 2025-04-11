@@ -44,7 +44,8 @@ contextBridge.exposeInMainWorld('electron', {
       'save-save-path',
       'open-external-link',
       'save-background-settings',
-      'save-url-history'
+      'save-url-history',
+      'save-custom-filename'
     ]
     if (validChannels.includes(channel)) {
       ipcRenderer.send(channel, data)
@@ -62,7 +63,9 @@ contextBridge.exposeInMainWorld('electron', {
       'load-background-settings',
       'upload-background-image',
       'reset-background-image',
-      'load-url-history'
+      'load-url-history',
+      'load-custom-filename',
+      'list-excel-files'
     ]
     if (validChannels.includes(channel)) {
       return ipcRenderer.invoke(channel, data)

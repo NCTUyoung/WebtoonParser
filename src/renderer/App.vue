@@ -15,7 +15,7 @@
             <div class="card-header" @click="toggleSection('url')">
               <h2>Webtoon 網址</h2>
               <el-button 
-                type="text" 
+                link 
                 class="collapse-toggle"
                 @click.stop="toggleSection('url')"
               >
@@ -41,7 +41,7 @@
             <div class="card-header" @click="toggleSection('schedule')">
               <h2>定時設置</h2>
               <el-button 
-                type="text" 
+                link 
                 class="collapse-toggle"
                 @click.stop="toggleSection('schedule')"
               >
@@ -67,7 +67,7 @@
             <div class="card-header" @click="toggleSection('savePath')">
               <h2>儲存設置</h2>
               <el-button 
-                type="text" 
+                link 
                 class="collapse-toggle"
                 @click.stop="toggleSection('savePath')"
               >
@@ -81,6 +81,7 @@
             <SavePathSettings 
               v-model="savePath" 
               v-model:append-mode="appendMode" 
+              v-model:filename="customFilename"
             />
           </div>
         </el-card>
@@ -91,7 +92,7 @@
             <div class="card-header" @click="toggleSection('background')">
               <h2>背景設置</h2>
               <el-button 
-                type="text" 
+                link 
                 class="collapse-toggle"
                 @click.stop="toggleSection('background')"
               >
@@ -119,7 +120,7 @@
                   清空日誌
                 </el-button>
                 <el-button 
-                  type="text" 
+                  link 
                   class="collapse-toggle"
                   @click.stop="toggleSection('log')"
                 >
@@ -196,6 +197,7 @@ const scheduleSettings = ref({
 
 const savePath = ref('')
 const appendMode = ref(true)
+const customFilename = ref('')
 
 const backgroundSettings = ref({
   type: 'default',
@@ -348,7 +350,8 @@ const startScraping = async (forceAppend = false) => {
     const result = await window.electron.invoke('start-scraping', {
       urls: urlList,
       savePath: savePath.value,
-      append: forceAppend || appendMode.value
+      append: forceAppend || appendMode.value,
+      customFilename: customFilename.value
     })
     
     // Check result, if successful show success message and stop loading state
