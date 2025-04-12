@@ -4,7 +4,7 @@
       <!-- Header bar -->
       <el-header class="app-header">
         <div class="header-content">
-          <h1>Webtoon爬蟲工具 <span class="version">v{{ version }}</span></h1>
+          <h1>漫畫/小說爬蟲工具 <span class="version">v{{ version }}</span></h1>
         </div>
       </el-header>
 
@@ -13,7 +13,7 @@
         <el-card class="section-card" :class="{ 'is-collapsed': !isUrlSectionExpanded }">
           <template #header>
             <div class="card-header" @click="toggleSection('url')">
-              <h2>Webtoon 網址</h2>
+              <h2>網站網址</h2>
               <el-button 
                 link 
                 class="collapse-toggle"
@@ -416,6 +416,14 @@ const saveSavePath = () => {
 }
 
 /**
+ * Save custom filename to storage
+ */
+const saveCustomFilename = () => {
+  console.log('Saving custom filename:', customFilename.value)
+  window.electron.send('save-custom-filename', customFilename.value)
+}
+
+/**
  * Save all application settings
  */
 const saveAllSettings = () => {
@@ -423,6 +431,7 @@ const saveAllSettings = () => {
   saveScheduleSettings()
   saveSavePath()
   saveBackgroundSettings()
+  saveCustomFilename()
 }
 
 // =========================================================
@@ -442,6 +451,15 @@ watch(savePath, (newValue, oldValue) => {
 watch(backgroundSettings, () => {
   saveBackgroundSettings()
 }, { deep: true })
+
+// Watch for custom filename changes
+watch(customFilename, (newValue, oldValue) => {
+  // Only save when value actually changes
+  if (newValue !== oldValue) {
+    console.log('Custom filename changed:', { newValue, oldValue })
+    saveCustomFilename()
+  }
+})
 
 // Watch for schedule settings changes
 watch(scheduleSettings, () => {
@@ -475,6 +493,14 @@ onMounted(async () => {
     } catch (error) {
       console.error('Failed to load background settings:', error)
       // If loading fails, use default settings (already set)
+    }
+    
+    try {
+      const savedFilename = await window.electron.invoke('load-custom-filename')
+      console.log('Loaded custom filename:', savedFilename)
+      customFilename.value = savedFilename
+    } catch (error) {
+      console.error('Failed to load custom filename:', error)
     }
   } catch (error) {
     console.error('Failed to load settings:', error)

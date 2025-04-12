@@ -1,0 +1,7 @@
+# Cursor Rules for webtoon-parser project
+
+# Rule 1: All code comments must be written in English
+comments.language = english
+
+# Rule 2: Review changes after each modification to ensure they are reasonable
+review.after_changes = true 

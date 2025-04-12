@@ -1,10 +1,16 @@
 # 更新日誌
 
-## [2.0.3] - YYYY-MM-DD
-### Added
-- Added support for scraping novel data from KadoKado (kadokado.com.tw).
-- Scraping manager now detects site type (Webtoon or KadoKado) based on URL.
-- Excel output adjusted for novel data (e.g., using word count instead of likes, different info columns).
+## [2.1.0] - 2024-07-28
+### 新增
+- **多種內容類型支援**：從僅支援 Webtoon 擴展到支援多種漫畫和小說網站
+- **小說抓取支援**：添加對 KadoKado (kadokado.com.tw) 小說數據的抓取支援
+- **自動網站識別**：抓取管理器根據 URL 自動檢測網站類型（Webtoon 或 KadoKado）
+- **Excel 輸出優化**：根據不同內容類型（漫畫/小說）調整 Excel 輸出（例如，小說使用字數而非點贊數，不同的信息列）
+
+### 改進
+- **應用程序標題與描述**：將應用程序名稱從"Webtoon爬蟲工具"更改為"漫畫/小說爬蟲工具"
+- **界面更新**：調整所有相關的UI文本，使其適用於多種內容類型
+- **代碼重構**：改進內部結構，提高可維護性和擴展性
 
 ## [2.0.2] - 2024-07-27
 
