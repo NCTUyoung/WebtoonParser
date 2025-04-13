@@ -124,3 +124,19 @@ For testing the module, use the included test utilities:
 const testManager = require('./excel/test-manager');
 await testManager.runAllTests();
 ```
+
+## 最近更新
+
+### 章节处理逻辑重构
+- 章节处理逻辑现已集中到Strategy策略类中，提高了代码的可维护性
+- 为BaseStrategy添加了以下新方法:
+  - `prepareChapterData(chapters)`: 处理和标准化章节数据
+  - `buildChapterColumns(chaptersByNumber)`: 构建章节列定义
+  - `extractChapterFieldValue(colName, chaptersByNumber)`: 提取章节字段值
+
+- 相关的改动：
+  - ExcelService中的prepareChapterData方法标记为废弃
+  - WorkbookProcessor中的buildChapterColumns方法标记为废弃
+  - ExcelManager现在使用Strategy类的prepareChapterData方法处理章节数据
+
+这些更改使章节相关逻辑更加集中和一致，提高了代码的可维护性和可扩展性。针对不同内容类型(漫画/小说)的特定逻辑现在完全封装在各自的策略类中。

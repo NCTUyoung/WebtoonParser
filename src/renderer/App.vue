@@ -274,16 +274,18 @@ const applyBackgroundSettings = () => {
  */
 const startScraping = async (forceAppend = false) => {
   console.log('Starting scraping process')
-  console.log('URLs:', urls.value)
+
+  // Import UrlStore to ensure we get the latest URLs
+  const urlStore = useUrlStore()
+  const urlList = urlStore.urlList
+
+  console.log('URLList from store:', urlList)
   console.log('Append mode:', forceAppend || settingsStore.appendMode)
 
-  if (!urls.value) {
+  if (!urlList || urlList.length === 0) {
     ElMessage.warning('Please enter at least one URL')
     return
   }
-
-  // Split input URLs into array
-  const urlList = urls.value.split('\n').filter(url => url.trim())
 
   // Show loading state immediately before scraping
   urlInputRef.value?.setLoading(true)

@@ -1,7 +1,7 @@
 <template>
   <div class="url-table-container">
     <el-table
-      :data="filteredData"
+      :data="filteredHistory"
       style="width: 100%"
       max-height="400px"
       :border="true"
@@ -16,13 +16,13 @@
               v-model="row.editLabel"
               size="small"
               placeholder="輸入標籤名稱"
-              @blur="saveLabel(row)"
-              @keyup.enter="saveLabel(row)"
-              ref="labelInput"
+              @blur="saveLabel(row.url)"
+              @keyup.enter="saveLabel(row.url)"
+              :ref="(el: HTMLInputElement | null) => { if (el) inputRefs[row.url] = el }"
             />
-            <div v-else class="label-display" @click.stop="startEditing(row)">
+            <div v-else class="label-display" @click.stop="startEditing(row.url)">
               {{ row.label || '未命名' }}
-              <el-icon class="edit-icon"><Edit /></el-icon>
+              <el-icon class="edit-icon" @click.stop="startEditing(row.url)"><Edit /></el-icon>
             </div>
           </div>
         </template>
@@ -69,11 +69,11 @@
       </el-table-column>
 
       <el-table-column label="操作" width="150" align="center">
-        <template #default="{ row, $index }">
+        <template #default="{ row }">
           <div class="action-cell">
             <el-tooltip content="生成標籤" placement="top">
               <el-button
-                @click.stop="generateLabel(row)"
+                @click.stop="generateLabel(row.url)"
                 circle
                 size="small"
                 class="action-button"
@@ -83,7 +83,7 @@
             </el-tooltip>
             <el-tooltip content="刪除" placement="top">
               <el-button
-                @click.stop="deleteItem(row)"
+                @click.stop="deleteHistoryItem(row.url)"
                 circle
                 size="small"
                 type="danger"
@@ -100,119 +100,41 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, watch } from 'vue'
+import { ref, nextTick, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Edit, CopyDocument, Link, Star, Delete, Plus } from '@element-plus/icons-vue'
-import { generateLabelFromUrl } from '../../utils/urlUtils'
+import { useUrlStore } from '../../stores/urlStore'
 
-interface HistoryItem {
-  url: string
-  label: string
-  editing?: boolean
-  editLabel?: string
-  error?: string
-}
+// Use Pinia Store
+const urlStore = useUrlStore()
 
-const props = defineProps({
-  data: {
-    type: Array as () => HistoryItem[],
-    required: true
-  },
-  searchQuery: {
-    type: String,
-    default: ''
-  }
-})
+// Reference to input field DOM elements
+const inputRefs = ref<Record<string, HTMLInputElement | null>>({})
 
-const emit = defineEmits([
-  'update:data',
-  'delete-item',
-  'open-url',
-  'add-to-input'
-])
+// Start editing label
+const startEditing = (url: string) => {
+  urlStore.startEditing(url)
 
-const labelInput = ref<HTMLInputElement | null>(null)
-
-// 过滤后的数据
-const filteredData = computed(() => {
-  if (!props.searchQuery) return props.data
-
-  const query = props.searchQuery.toLowerCase()
-  return props.data.filter(item =>
-    (item.label && item.label.toLowerCase().includes(query)) ||
-    item.url.toLowerCase().includes(query)
-  )
-})
-
-// 开始编辑标签
-const startEditing = (row: HistoryItem) => {
-  // 先重置所有行的编辑状态
-  props.data.forEach(item => {
-    item.editing = false
-  })
-
-  // 设置当前行为编辑状态
-  row.editing = true
-  row.editLabel = row.label || ''
-
-  // 等待DOM更新后聚焦输入框
+  // Focus the input field after DOM update
   nextTick(() => {
-    if (labelInput.value) {
-      labelInput.value.focus()
+    if (inputRefs.value[url]) {
+      inputRefs.value[url]?.focus()
     }
   })
 }
 
-// 保存标签
-const saveLabel = (row: HistoryItem) => {
-  if (row.editing && row.editLabel !== undefined) {
-    const newData = [...props.data].map(item => {
-      // 創建不包含editing和editLabel屬性的新對象
-      const cleanItem = {
-        url: item.url,
-        label: item.label
-      }
-
-      // 如果是當前編輯的行，更新標籤
-      if (item.url === row.url && row.editLabel !== undefined) {
-        cleanItem.label = row.editLabel.trim()
-      }
-
-      return cleanItem
-    })
-
-    // 更新數據
-    emit('update:data', newData)
-
-    // 在本地更新編輯狀態（不會傳遞到父組件）
-    row.editing = false
-  }
+// Save label
+const saveLabel = (url: string) => {
+  urlStore.saveLabel(url)
 }
 
-// 生成标签
-const generateLabel = (row: HistoryItem) => {
-  const label = generateLabelFromUrl(row.url)
-
-  const newData = [...props.data].map(item => {
-    // 創建不包含editing和editLabel屬性的新對象
-    const cleanItem = {
-      url: item.url,
-      label: item.label
-    }
-
-    // 如果是當前行，更新標籤
-    if (item.url === row.url) {
-      cleanItem.label = label
-    }
-
-    return cleanItem
-  })
-
-  emit('update:data', newData)
+// Generate label
+const generateLabel = (url: string) => {
+  const label = urlStore.generateLabel(url)
   ElMessage.success(`已生成標籤: ${label}`)
 }
 
-// 复制URL
+// Copy URL
 const copyUrl = (url: string) => {
   navigator.clipboard.writeText(url)
     .then(() => {
@@ -224,37 +146,37 @@ const copyUrl = (url: string) => {
     })
 }
 
-// 在浏览器中打开URL
+// Open URL in browser
 const openUrl = (url: string) => {
-  emit('open-url', url)
+  window.electron.send('open-external-url', url)
 }
 
-// 添加URL到输入框
+// Add URL to input field
 const addToInput = (url: string) => {
-  emit('add-to-input', url)
+  urlStore.addToInput(url)
 }
 
-// 删除项目
-const deleteItem = (row: HistoryItem) => {
-  emit('delete-item', row)
+// Delete item
+const deleteHistoryItem = (url: string) => {
+  // 使用 urlStore 的删除确认方法
+  urlStore.showDeleteConfirm(url)
 }
 
-// 行点击事件
-const handleRowClick = (row: HistoryItem) => {
-  // 如果有其他行在编辑中，保存它们
-  props.data.forEach(item => {
-    if (item.editing && item !== row) {
-      saveLabel(item)
-    }
-  })
+// Row click event
+const handleRowClick = (row: { url: string, editing?: boolean }) => {
+  // If other rows are being edited, save them
+  const editingItems = urlStore.history.filter(item => item.editing && item.url !== row.url)
+  if (editingItems.length > 0) {
+    editingItems.forEach(item => {
+      if (item.url) {
+        saveLabel(item.url)
+      }
+    })
+  }
 }
 
-// 监听数据变化，重置编辑状态
-watch(() => props.data, () => {
-  props.data.forEach(item => {
-    item.editing = false
-  })
-}, { deep: true })
+// Computed property to get filtered history
+const filteredHistory = computed(() => urlStore.filteredHistory)
 </script>
 
 <style scoped>
@@ -263,7 +185,6 @@ watch(() => props.data, () => {
   margin-top: 16px;
 }
 
-/* 标签单元格样式 */
 .label-cell {
   display: flex;
   align-items: center;
@@ -295,7 +216,6 @@ watch(() => props.data, () => {
   opacity: 1;
 }
 
-/* URL单元格样式 */
 .url-cell {
   display: flex;
   align-items: center;
@@ -305,7 +225,7 @@ watch(() => props.data, () => {
 
 .url-text {
   flex: 1;
-  max-width: calc(100% - 120px); /* 为操作按钮预留空间 */
+  max-width: calc(100% - 120px); /* Space reserved for action buttons */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -319,14 +239,12 @@ watch(() => props.data, () => {
   transition: opacity 0.2s;
 }
 
-/* 操作单元格样式 */
 .action-cell {
   display: flex;
   justify-content: center;
   gap: 8px;
 }
 
-/* 统一按钮样式 */
 :deep(.el-button.action-button) {
   height: 32px;
   width: 32px;
@@ -360,7 +278,6 @@ watch(() => props.data, () => {
   color: #f56c6c;
 }
 
-/* 表格样式覆盖 */
 :deep(.el-table__row) {
   cursor: pointer;
   transition: background-color 0.2s;

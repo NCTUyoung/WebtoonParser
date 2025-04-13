@@ -115,7 +115,7 @@ class WorkbookProcessor {
 
       // Process column structure
       this.log('Processing column structure...');
-      const chapterColumns = this.buildChapterColumns(chaptersByNumber, strategy);
+      const chapterColumns = strategy.buildChapterColumns(chaptersByNumber);
       const columnsAdded = builder.addColumnsToExistingHeader(columnMap, chapterColumns);
 
       if (columnsAdded > 0) {
@@ -172,7 +172,7 @@ class WorkbookProcessor {
 
         // Process column structure
         this.log('Processing column structure...');
-        const chapterColumns = this.buildChapterColumns(chaptersByNumber, strategy);
+        const chapterColumns = strategy.buildChapterColumns(chaptersByNumber);
         const columnsAdded = builder.addColumnsToExistingHeader(columnMap, chapterColumns);
 
         if (columnsAdded > 0) {
@@ -197,8 +197,8 @@ class WorkbookProcessor {
     // Set up columns
     const columns = strategy.getColumnsDefinition();
 
-    // Add chapter columns
-    const chapterColumns = this.buildChapterColumns(chaptersByNumber, strategy);
+    // Add chapter columns using strategy implementation
+    const chapterColumns = strategy.buildChapterColumns(chaptersByNumber);
     columns.push(...chapterColumns);
 
     // Use builder to set up
@@ -212,22 +212,21 @@ class WorkbookProcessor {
     return worksheet;
   }
 
-  // Build chapter columns
+  /**
+   * Build chapter columns - DEPRECATED
+   * This method is maintained for backward compatibility only
+   * New code should use strategy.buildChapterColumns() instead
+   *
+   * @deprecated Use strategy.buildChapterColumns() instead
+   * @param {Object} chaptersByNumber - Chapter data by number
+   * @param {Object} strategy - Strategy instance
+   * @returns {Array} Array of column definitions
+   */
   buildChapterColumns(chaptersByNumber, strategy) {
-    const chapterColumns = [];
-    const chapterKeys = Object.keys(chaptersByNumber).sort();
+    this.log(`Warning: Using deprecated buildChapterColumns method in WorkbookProcessor. Use strategy.buildChapterColumns() instead.`);
 
-    chapterKeys.forEach(key => {
-      const chapterNum = key.slice(2).replace(/^0+/, ''); // Remove prefix and leading zeros
-      const headerText = strategy.getChapterHeaderFormat(chapterNum);
-      chapterColumns.push({
-        header: headerText,
-        key: key,
-        width: 10
-      });
-    });
-
-    return chapterColumns;
+    // Delegate to strategy implementation for consistency
+    return strategy.buildChapterColumns(chaptersByNumber);
   }
 
   // Prepare workbook and path

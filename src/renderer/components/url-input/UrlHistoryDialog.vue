@@ -26,7 +26,7 @@
       <!-- 智能輸入區：搜索/新增網址 -->
       <div class="search-bar">
         <el-input
-          v-model="inputValue"
+          v-model="searchOrNewUrl"
           placeholder="搜索網址或標籤..."
           clearable
           @keyup.enter="handleEnterKey"
@@ -51,18 +51,11 @@
       </div>
 
       <!-- URL table -->
-      <url-table
-        :data="urlHistory"
-        :search-query="inputValue"
-        @update:data="updateUrlHistory"
-        @delete-item="confirmDelete"
-        @open-url="openExternalUrl"
-        @add-to-input="addToInput"
-      />
+      <url-table />
 
       <!-- Simplified footer status -->
       <div class="dialog-footer">
-        <span class="status-text">{{ urlHistory.length }} 個網址</span>
+        <span class="status-text">{{ urlStore.history.length }} 個網址</span>
         <span v-if="autoSaveStatus" class="auto-save-status">
           <el-icon><Check /></el-icon> 已自動保存
         </span>
@@ -70,44 +63,32 @@
     </div>
 
     <!-- Delete confirmation dialog -->
-    <delete-confirm-dialog
-      v-model="deleteConfirmVisible"
-      :item="itemToDelete"
-      @confirm="deleteUrl"
-    />
+    <delete-confirm-dialog />
   </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Document, Search, Plus, Check, Close } from '@element-plus/icons-vue'
 import UrlTable from './UrlTable.vue'
 import DeleteConfirmDialog from './DeleteConfirmDialog.vue'
 import { isValidUrl, formatUrl, generateLabelFromUrl } from '../../utils/urlUtils'
+import { useUrlStore } from '../../stores/urlStore'
 
-interface HistoryItem {
-  url: string
-  label: string
-  error?: string
-}
+// 使用 Pinia Store
+const urlStore = useUrlStore()
 
 const props = defineProps({
   modelValue: {
     type: Boolean,
     default: false
-  },
-  history: {
-    type: Array as () => HistoryItem[],
-    default: () => []
   }
 })
 
 const emit = defineEmits([
   'update:modelValue',
-  'update:history',
-  'open-url',
-  'add-to-input'
+  'open-url'
 ])
 
 // Dialog visibility
@@ -116,28 +97,18 @@ const dialogVisible = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
-// URL history records
-const urlHistory = ref<HistoryItem[]>([...props.history])
-
-// 統一輸入欄位
-const inputValue = ref('')
-const errorMessage = ref('')
-
-// Auto-save status
-const autoSaveStatus = ref(false)
-
-// Add URL form data
-const newUrlForm = ref({
-  label: ''
+// 搜索或新URL输入
+const searchOrNewUrl = computed({
+  get: () => urlStore.searchQuery,
+  set: (value) => { urlStore.searchQuery = value }
 })
 
-// Delete confirmation dialog
-const deleteConfirmVisible = ref(false)
-const itemToDelete = ref<HistoryItem | null>(null)
+const errorMessage = ref('')
+const autoSaveStatus = ref(false)
 
-// 嘗試添加當前輸入
+// Try to add current input
 const tryAddCurrentInput = () => {
-  if (!inputValue.value) {
+  if (!searchOrNewUrl.value) {
     errorMessage.value = '請輸入網址'
     setTimeout(() => {
       errorMessage.value = ''
@@ -145,7 +116,7 @@ const tryAddCurrentInput = () => {
     return
   }
 
-  const formattedUrl = formatUrl(inputValue.value)
+  const formattedUrl = formatUrl(searchOrNewUrl.value)
 
   if (!isValidUrl(formattedUrl)) {
     errorMessage.value = '請輸入有效的網址'
@@ -155,8 +126,8 @@ const tryAddCurrentInput = () => {
     return
   }
 
-  // 檢查是否已存在
-  if (urlHistory.value.some(item => item.url === formattedUrl)) {
+  // Check if URL already exists
+  if (urlStore.history.some(item => item.url === formattedUrl)) {
     errorMessage.value = '該網址已存在於列表中'
     setTimeout(() => {
       errorMessage.value = ''
@@ -164,70 +135,38 @@ const tryAddCurrentInput = () => {
     return
   }
 
-  // 生成默認標籤
-  const label = generateLabelFromUrl(formattedUrl)
-
-  // 添加新URL
-  addUrl(formattedUrl, label)
+  // Add new URL to history
+  addUrl(formattedUrl)
 }
 
-// 處理按Enter鍵 - 如果是有效URL就添加，否則執行搜索
+// Handle Enter key - add if valid URL, otherwise perform search
 const handleEnterKey = () => {
-  const formattedUrl = formatUrl(inputValue.value)
-  if (isValidUrl(formattedUrl) && !urlHistory.value.some(item => item.url === formattedUrl)) {
+  const formattedUrl = formatUrl(searchOrNewUrl.value)
+  if (isValidUrl(formattedUrl) && !urlStore.history.some(item => item.url === formattedUrl)) {
     tryAddCurrentInput()
   }
-  // 如果不是有效URL或已存在，Enter鍵默認行為就是搜索
+  // If not a valid URL or already exists, default behavior of Enter key is search
 }
 
-// 添加URL到歷史記錄
-const addUrl = (url: string, label: string) => {
-  const newItem = {
-    url,
-    label
-  }
+// Add URL to history
+const addUrl = (url: string) => {
+  // Add to history
+  const label = generateLabelFromUrl(url)
+  urlStore.history.push({ url, label })
+  urlStore.saveUrlHistory()
 
-  urlHistory.value = [...urlHistory.value, newItem]
   ElMessage.success('網址已添加')
 
-  // 清空輸入和錯誤
-  inputValue.value = ''
+  // Clear input and error
+  searchOrNewUrl.value = ''
   errorMessage.value = ''
 
-  autoSave()
+  showAutoSaveStatus()
 }
 
 // Close dialog
 const closeDialog = () => {
   dialogVisible.value = false
-}
-
-// Update URL history
-const updateUrlHistory = (newHistory: HistoryItem[]) => {
-  urlHistory.value = newHistory
-  autoSave()
-}
-
-// Save history
-const saveHistory = () => {
-  const cleanHistory = urlHistory.value.map(item => ({
-    url: item.url,
-    label: item.label
-  }))
-
-  emit('update:history', cleanHistory)
-  showAutoSaveStatus()
-}
-
-// Auto save
-const autoSave = () => {
-  const cleanHistory = urlHistory.value.map(item => ({
-    url: item.url,
-    label: item.label
-  }))
-
-  emit('update:history', cleanHistory)
-  showAutoSaveStatus()
 }
 
 // Show auto-save status
@@ -238,39 +177,10 @@ const showAutoSaveStatus = () => {
   }, 3000)
 }
 
-// Confirm delete
-const confirmDelete = (item: HistoryItem) => {
-  itemToDelete.value = item
-  deleteConfirmVisible.value = true
-}
-
-// Delete URL
-const deleteUrl = () => {
-  if (!itemToDelete.value) return
-
-  urlHistory.value = urlHistory.value.filter(item => item.url !== itemToDelete.value?.url)
-  ElMessage.success('網址已刪除')
-  autoSave()
-
-  deleteConfirmVisible.value = false
-  itemToDelete.value = null
-}
-
-// Open URL in external browser
-const openExternalUrl = (url: string) => {
-  emit('open-url', url)
-}
-
-// Add URL to input box
-const addToInput = (url: string) => {
-  emit('add-to-input', url)
-  ElMessage.success('已添加到輸入框')
-}
-
-// Watch props.history changes
-watch(() => props.history, (newHistory) => {
-  urlHistory.value = [...newHistory]
-}, { deep: true })
+// Load history on initialization
+onMounted(() => {
+  urlStore.loadUrlHistory()
+})
 </script>
 
 <style scoped>

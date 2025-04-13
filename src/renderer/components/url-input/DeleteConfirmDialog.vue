@@ -22,21 +22,21 @@
         </el-tooltip>
       </div>
     </template>
-    
+
     <div class="delete-confirm-content">
       <el-icon class="warning-icon"><Warning /></el-icon>
       <p>確定要刪除這個網址嗎？</p>
-      <div v-if="item" class="delete-item-container">
+      <div v-if="urlStore.itemToDelete" class="delete-item-container">
         <div class="delete-item-info">
-          <strong>{{ item.label || '未命名' }}</strong>
-          <div class="delete-item-url">{{ item.url }}</div>
+          <strong>{{ urlStore.itemToDelete.label || '未命名' }}</strong>
+          <div class="delete-item-url">{{ urlStore.itemToDelete.url }}</div>
         </div>
       </div>
     </div>
     <template #footer>
       <div class="dialog-footer">
         <el-button @click="closeDialog" class="custom-btn">取消</el-button>
-        <el-button type="danger" @click="confirmDelete" class="custom-btn danger-btn">
+        <el-button type="danger" @click="handleConfirmDelete" class="custom-btn danger-btn">
           <el-icon><Delete /></el-icon> 確認刪除
         </el-button>
       </div>
@@ -47,43 +47,36 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Delete, Warning, Close } from '@element-plus/icons-vue'
+import { useUrlStore } from '../../stores/urlStore'
+import { ElMessage } from 'element-plus'
 
-interface HistoryItem {
-  url: string
-  label: string
-  error?: string
-}
+// 使用Pinia Store
+const urlStore = useUrlStore()
 
-const props = defineProps({
-  modelValue: {
-    type: Boolean,
-    default: false
-  },
-  item: {
-    type: Object as () => HistoryItem | null,
-    default: null
+// 计算属性：控制对话框显示状态
+const dialogVisible = computed({
+  get: () => urlStore.deleteConfirmVisible,
+  set: (value) => {
+    if (!value) {
+      urlStore.cancelDelete()
+    }
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'confirm'])
-
-const dialogVisible = computed({
-  get: () => props.modelValue,
-  set: (value) => emit('update:modelValue', value)
-})
-
+// 关闭对话框
 const closeDialog = () => {
-  dialogVisible.value = false
+  urlStore.cancelDelete()
 }
 
-const confirmDelete = () => {
-  emit('confirm')
-  closeDialog()
+// 确认删除
+const handleConfirmDelete = () => {
+  urlStore.confirmDelete()
+  ElMessage.success('網址已刪除')
 }
 </script>
 
 <style scoped>
-/* 对话框样式 */
+/* Dialog styles */
 .dialog-custom-header {
   display: flex;
   align-items: center;
@@ -119,7 +112,7 @@ const confirmDelete = () => {
   border-top: 1px solid #ebeef5;
 }
 
-/* 删除确认对话框样式 */
+/* Delete confirmation dialog styles */
 .delete-confirm-content {
   display: flex;
   flex-direction: column;
@@ -161,7 +154,7 @@ const confirmDelete = () => {
   word-break: break-all;
 }
 
-/* 统一按钮样式 */
+/* Unified button styles */
 .custom-btn {
   border-radius: 8px;
   font-weight: 500;
@@ -206,7 +199,7 @@ const confirmDelete = () => {
   color: var(--primary-color);
 }
 
-/* 对话框内容区域样式 */
+/* Dialog content area styles */
 :deep(.delete-confirm-dialog .el-dialog__header) {
   padding: 0;
   margin: 0;
@@ -231,4 +224,4 @@ const confirmDelete = () => {
   padding: 10px 20px 20px;
   box-sizing: border-box;
 }
-</style> 
+</style>

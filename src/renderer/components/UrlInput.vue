@@ -245,6 +245,12 @@ const handleSubmit = async () => {
   error.value = ''
   loading.value = true
 
+  // Make sure URLs are saved to store before scraping
+  urlStore.currentInput = url.value
+
+  // Save URLs to storage
+  urlStore.saveUrls()
+
   // Add URLs to history before scraping
   urlStore.addToHistory()
 
@@ -343,6 +349,10 @@ onMounted(() => {
 // Clean up event listeners on component unmount
 onUnmounted(() => {
   window.electron.removeAllListeners('log-message')
+
+  // Make sure data is saved when component is unmounted
+  urlStore.saveUrls()
+  urlStore.saveUrlHistory()
 })
 
 // Toggle help display state

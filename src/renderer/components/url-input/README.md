@@ -9,6 +9,16 @@
 - `DeleteConfirmDialog.vue` - 删除确认对话框组件
 - `urlUtils.ts` - URL相关的工具函数
 
+## 状态管理
+
+组件使用Pinia进行状态管理，相关store位于：
+
+- `stores/urlStore.ts` - URL管理相关的状态存储，包括：
+  - 当前输入
+  - URL历史记录
+  - 搜索查询
+  - 编辑状态管理
+
 ## 功能特点
 
 1. **URL历史管理**
@@ -28,7 +38,40 @@
    - 美观的表格布局
    - 动画效果和交互反馈
 
+4. **状态管理**
+   - 集中式状态管理
+   - 实时数据同步
+   - 编辑状态可靠保存
+   - 组件间通信优化
+
 ## 使用方法
+
+### 使用Pinia Store (推荐)
+
+```vue
+<template>
+  <el-button @click="showDialog">显示URL历史</el-button>
+  <url-history-dialog v-model="dialogVisible" />
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import { useUrlStore } from '../../stores/urlStore'
+import UrlHistoryDialog from './url-input/UrlHistoryDialog.vue'
+
+const dialogVisible = ref(false)
+const urlStore = useUrlStore()
+
+// 加载历史数据
+urlStore.loadUrlHistory()
+
+const showDialog = () => {
+  dialogVisible.value = true
+}
+</script>
+```
+
+### 传统方式 (兼容旧版)
 
 ```vue
 <template>
@@ -71,4 +114,5 @@ const openExternalUrl = (url) => {
 
 - 组件依赖Element Plus UI库
 - 需要Electron环境支持外部URL打开功能
-- 本地存储用于保存URL历史记录 
+- 使用Pinia进行状态管理
+- 提供标签编辑和搜索功能

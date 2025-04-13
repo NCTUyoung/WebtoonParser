@@ -95,21 +95,9 @@ class ExcelService {
             (contentType === 'webtoon' && this.isWebtoonField(colName))) {
           rowValues[colIndex] = this.getFieldValue(colName, preparedInfo);
         }
-        // Map chapter data for novels
-        else if (contentType === 'novel' && colName.startsWith('Words_CH')) {
-          const chapterNum = colName.replace('Words_CH', '');
-          const chapterKey = `ch${chapterNum.padStart(3, '0')}`;
-          if (chaptersByNumber[chapterKey] !== undefined) {
-            rowValues[colIndex] = chaptersByNumber[chapterKey];
-          }
-        }
-        // Map chapter data for webtoons
-        else if (contentType === 'webtoon' && colName.startsWith('CH')) {
-          const chapterNum = colName.replace('CH', '');
-          const chapterKey = `ch${chapterNum.padStart(3, '0')}`;
-          if (chaptersByNumber[chapterKey] !== undefined) {
-            rowValues[colIndex] = chaptersByNumber[chapterKey];
-          }
+        // Extract chapter field value using strategy
+        else {
+          rowValues[colIndex] = strategy.extractChapterFieldValue(colName, chaptersByNumber);
         }
       }
     });
@@ -128,9 +116,18 @@ class ExcelService {
     const preparedInfo = strategy.prepareInfoData(info);
     Object.assign(rowData, preparedInfo);
 
-    // Add chapter data
-    Object.entries(chaptersByNumber).forEach(([key, value]) => {
-      rowData[key] = value;
+    // Add chapter data using strategy
+    Object.keys(chaptersByNumber).forEach(key => {
+      const chapterNum = key.slice(2).replace(/^0+/, '');
+      const contentType = strategy.getContentType();
+
+      // Create appropriate key based on content type
+      const rowKey = contentType === 'novel'
+        ? `Words_CH${chapterNum}`
+        : `CH${chapterNum}`;
+
+      // Get value from chapter data using strategy
+      rowData[rowKey] = chaptersByNumber[key].value;
     });
 
     return rowData;
@@ -183,8 +180,19 @@ class ExcelService {
     return addedRow;
   }
 
-  // Prepare chapter data from raw chapters
+  /**
+   * Prepare chapter data from raw chapters - DEPRECATED
+   * This function is maintained for backward compatibility
+   * New code should use strategy.prepareChapterData() instead
+   *
+   * @deprecated Use strategy.prepareChapterData() instead
+   * @param {Array} chapters - Raw chapter data
+   * @param {boolean} isNovel - Whether the content is a novel
+   * @returns {Object} Processed chapter data
+   */
   prepareChapterData(chapters, isNovel) {
+    this.log(`Warning: Using deprecated prepareChapterData method in ExcelService. Use strategy.prepareChapterData() instead.`);
+
     const chaptersByNumber = {};
 
     if (!chapters || !Array.isArray(chapters)) {
@@ -213,13 +221,18 @@ class ExcelService {
 
       // Create standardized key
       const key = `ch${num.toString().padStart(3, '0')}`;
-      chaptersByNumber[key] = value;
+
+      // Store both chapter and value for backward compatibility
+      chaptersByNumber[key] = {
+        chapter: chapter,
+        value: value
+      };
     });
 
     // Only log when processing a significant number of chapters
     if (Object.keys(chaptersByNumber).length > 5) {
       const chapterCount = Object.keys(chaptersByNumber).length;
-      this.log(`Processed ${chapterCount} chapters`);
+      this.log(`Processed ${chapterCount} chapters using deprecated method`);
     }
 
     return chaptersByNumber;

@@ -13,7 +13,7 @@ const config = {
     baseDelay: 3000,
     randomDelayRange: 2000
   },
-  
+
   // Excel related configuration
   excel: {
     defaultColumns: [
@@ -27,7 +27,7 @@ const config = {
     sheetNameMaxLength: 31,
     authorMaxLength: 20  // Maximum characters for author field
   },
-  
+
   // Scraper related configuration
   scraper: {
     minPageDelay: 1000,
@@ -35,7 +35,7 @@ const config = {
     minChapterDelay: 3000,
     maxChapterDelay: 6000
   },
-  
+
   // Selector configuration
   selectors: {
     webtoon: {
@@ -57,20 +57,20 @@ const config = {
         episodeLikes: '.like_area'
     },
     kadokado: {
-        title: 'h1.css-13pwcqv',
+        title: 'h1.css-13pwcqv, h1.css-1i9heq0',
         author: '.css-ykwscm .css-1udy97n a',
-        description: '#introduction .css-hs30jl',
+        description: 'p.css-hs30jl',
         likes: '.css-13r89do .css-fyb2z6 .css-19vsh96',
         views: '.css-13r89do .css-1uju5dn .css-19vsh96',
         status: '#chapter .css-1upcx53:nth-child(1) .css-4cffwv:nth-child(1) .css-vurnku',
-        totalChapters: '#chapter .css-1upcx53:nth-child(2) .css-4cffwv:nth-child(1) .css-vurnku',
-        totalWords: '#chapter .css-1upcx53:nth-child(1) .css-4cffwv:nth-child(2) .css-vurnku',
-        chapterListContainer: '#chapter .css-17dn726',
-        chapterItem: 'ul.css-17dn726 > li.css-vurnku',
+        totalChapters: '.css-1upcx53 .css-4cffwv:nth-child(1) .css-vurnku',
+        totalWords: '.css-1upcx53 .css-4cffwv:nth-child(2) .css-vurnku',
+        chapterListContainer: 'ul.css-17dn726',
+        chapterItem: 'li.css-vurnku',
         chapterLink: 'a.css-lz56cq',
         chapterTitle: 'h4.css-egx0he',
         chapterUpdateDate: '.css-l8h7m9 > span.css-vurnku',
-        chapterWords: '.css-18ww83x svg[viewBox="0 0 16 16"] + .css-vurnku'
+        chapterWords: '.css-18ww83x svg[viewBox="0 0 16 16"] + .css-vurnku, .css-18ww83x .css-uy4tkx + .css-vurnku'
     }
   },
 
@@ -84,7 +84,7 @@ const config = {
   app: {
     // Default language setting
     defaultLocale: 'zh_TW.UTF-8',
-    
+
     // Window configuration
     window: {
       width: 1000,
@@ -95,14 +95,14 @@ const config = {
         sandbox: false
       }
     },
-    
+
     // Development mode settings
     dev: {
       devServerWaitTime: 2000,
       port: 3000
     }
   },
-  
+
   // Storage related configuration
   storage: {
     // Default setting values
@@ -112,7 +112,7 @@ const config = {
       scheduledMinute: '00',
       timezone: 'Asia/Taipei'
     },
-    
+
     // Storage key names
     keys: {
       urls: 'webtoon-urls',
@@ -121,20 +121,20 @@ const config = {
       urlHistory: 'url-history'
     }
   },
-  
+
   // Date settings
   date: {
     // Weekly date mapping
     dayOfWeekMap: {
-      '一': 1, 
-      '二': 2, 
-      '三': 3, 
+      '一': 1,
+      '二': 2,
+      '三': 3,
       '四': 4,
-      '五': 5, 
-      '六': 6, 
+      '五': 5,
+      '六': 6,
       '日': 0
     }
   }
 };
 
-module.exports = config; 
+module.exports = config;

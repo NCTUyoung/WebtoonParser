@@ -8,3 +8,6 @@ review.after_changes = true
 
 # Rule 3: Minimize JSDoc usage, only use when absolutely necessary
 jsdoc.minimize = true
+
+# Rule 4: Keep UI text in original language
+ui.text.language = original

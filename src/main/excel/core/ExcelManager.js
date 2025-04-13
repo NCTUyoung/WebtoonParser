@@ -31,8 +31,8 @@ class ExcelManager {
       // Get appropriate strategy
       const strategy = this.strategyFactory.getStrategy(params.isNovel);
 
-      // Prepare chapter data
-      const chaptersByNumber = this.excelService.prepareChapterData(params.chapters, params.isNovel);
+      // Prepare chapter data using strategy
+      const chaptersByNumber = strategy.prepareChapterData(params.chapters);
 
       // Process workbook and worksheet
       const {
