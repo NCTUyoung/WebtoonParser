@@ -25,7 +25,7 @@ const IMAGES_DIR = path.join(app.getPath('userData'), 'images')
 function registerStorageHandlers() {
   // 确保图片目录存在
   ensureImagesDirectory()
-  
+
   // URL存储
   ipcMain.handle('load-urls', () => {
     return store.get(config.storage.keys.urls, '')
@@ -57,39 +57,60 @@ function registerStorageHandlers() {
   ipcMain.on('save-url-history', (event, history) => {
     store.set(config.storage.keys.urlHistory, history)
   })
-  
+
+  // 附加模式设置
+  ipcMain.handle('load-append-mode', () => {
+    try {
+      const appendMode = store.get('appendMode')
+      logger.logInfo(`Loaded append mode: ${appendMode === undefined ? 'true (default)' : appendMode}`)
+      return appendMode === undefined ? true : appendMode // 默认为 true (附加模式)
+    } catch (error) {
+      logger.logError('Error loading append mode:', error)
+      return true // 出错时返回默认值
+    }
+  })
+
+  ipcMain.on('save-append-mode', (event, value) => {
+    try {
+      store.set('appendMode', value)
+      logger.logInfo(`Append mode saved: ${value}`)
+    } catch (error) {
+      logger.logError('Error saving append mode:', error)
+    }
+  })
+
   // 背景设置相关处理程序
-  
+
   // 保存背景设置
   ipcMain.on('save-background-settings', (event, settings) => {
     saveBackgroundSettings(settings)
   })
-  
+
   // 加载背景设置
   ipcMain.handle('load-background-settings', async () => {
     return loadBackgroundSettings()
   })
-  
+
   // 处理图片上传
   ipcMain.handle('upload-background-image', async (event, dataUrl) => {
     try {
       // 从数据URL中提取base64数据
       const imageData = dataUrl.split(',')[1]
       const imageBuffer = Buffer.from(imageData, 'base64')
-      
+
       // 生成唯一文件名
       const imageName = `background-${Date.now()}.png`
       const imagePath = path.join(IMAGES_DIR, imageName)
-      
+
       // 保存图片到磁盘
       fs.writeFileSync(imagePath, imageBuffer)
-      
+
       // 在Electron中，使用asar:///協議或返回data URL更可靠
       // 將圖片轉為Base64 data URL
       const imageBase64 = imageBuffer.toString('base64')
       const mimeType = 'image/png'
       const dataURL = `data:${mimeType};base64,${imageBase64}`
-      
+
       logger.logMessage(`背景图片已保存到 ${imagePath} 并转为 data URL`)
       return dataURL
     } catch (error) {
@@ -97,7 +118,7 @@ function registerStorageHandlers() {
       throw error
     }
   })
-  
+
   // 处理图片重置
   ipcMain.handle('reset-background-image', async () => {
     try {
@@ -106,7 +127,7 @@ function registerStorageHandlers() {
         // 读取当前设置
         const fileContent = fs.readFileSync(BACKGROUND_STORAGE_PATH, 'utf8')
         const settings = JSON.parse(fileContent)
-        
+
         // 先尝试删除可能存在的文件
         // 处理file://协议的URL
         if (settings.type === 'custom' && settings.imageUrl) {
@@ -137,7 +158,7 @@ function registerStorageHandlers() {
             }
           }
         }
-        
+
         // 重置设置
         const defaultSettings = {
           type: 'default',
@@ -145,14 +166,14 @@ function registerStorageHandlers() {
           opacity: 0.8,
           blur: 0
         }
-        
+
         // 保存默认设置
         fs.writeFileSync(BACKGROUND_STORAGE_PATH, JSON.stringify(defaultSettings, null, 2))
         logger.logMessage('背景设置已重置为默认值')
-        
+
         return defaultSettings
       }
-      
+
       return {
         type: 'default',
         imageUrl: '',
@@ -186,7 +207,7 @@ function registerStorageHandlers() {
       logger.logInfo(`Custom filename saved: ${sanitizedFilename}`);
     } catch (error) {
       logger.logError('Error saving custom filename:', error);
-    } 
+    }
   });
 }
 
@@ -201,7 +222,7 @@ function getSavePath(isTest, defaultPathProvider) {
   if (isTest && process.env.TEMP_DOWNLOAD_PATH) {
     return Promise.resolve(process.env.TEMP_DOWNLOAD_PATH)
   }
-  
+
   try {
     const savedPath = store.get(config.storage.keys.savePath)
     logger.logMessage('加载保存路径: ' + savedPath)
@@ -243,17 +264,17 @@ function getStore() {
 function saveToStorage(key, value) {
   try {
     let data = {}
-    
+
     // 如果文件存在，读取现有数据
     if (fs.existsSync(STORAGE_PATH)) {
       const fileContent = fs.readFileSync(STORAGE_PATH, 'utf8')
       data = JSON.parse(fileContent)
     }
-    
+
     // 更新数据并保存
     data[key] = value
     fs.writeFileSync(STORAGE_PATH, JSON.stringify(data, null, 2))
-    
+
     logger.logMessage(`已保存 ${key} 到存储`)
     return true
   } catch (error) {
@@ -274,11 +295,11 @@ function loadFromStorage(key, defaultValue) {
     if (!fs.existsSync(STORAGE_PATH)) {
       return defaultValue
     }
-    
+
     // 读取并解析文件
     const fileContent = fs.readFileSync(STORAGE_PATH, 'utf8')
     const data = JSON.parse(fileContent)
-    
+
     // 返回值或默认值
     return data[key] !== undefined ? data[key] : defaultValue
   } catch (error) {
@@ -301,23 +322,23 @@ function saveBackgroundSettings(settings) {
       opacity: typeof settings.opacity === 'number' ? settings.opacity : 0.8,
       blur: typeof settings.blur === 'number' ? settings.blur : 0
     }
-    
+
     // 如果设置包含自定义图片的数据URL，将其保存到磁盘，但在设置中保留data URL格式
     if (safeSettings.type === 'custom' && safeSettings.imageUrl && safeSettings.imageUrl.startsWith('data:')) {
       const imageData = safeSettings.imageUrl.split(',')[1]
       const imageBuffer = Buffer.from(imageData, 'base64')
       const imageName = `background-${Date.now()}.png`
       const imagePath = path.join(IMAGES_DIR, imageName)
-      
+
       // 保存图片到磁盘
       fs.writeFileSync(imagePath, imageBuffer)
-      
+
       // 记录文件保存位置，但在设置中保留data URL
       logger.logMessage(`背景图片已保存到: ${imagePath}`)
-      
+
       // 不修改imageUrl，保持为data URL
     }
-    
+
     // 保存设置到文件
     fs.writeFileSync(BACKGROUND_STORAGE_PATH, JSON.stringify(safeSettings, null, 2))
     logger.logMessage('背景设置已保存')
@@ -343,17 +364,17 @@ function loadBackgroundSettings() {
         blur: 0
       }
     }
-    
+
     // 读取并解析文件
     const fileContent = fs.readFileSync(BACKGROUND_STORAGE_PATH, 'utf8')
     const settings = JSON.parse(fileContent)
-    
+
     // 处理可能存在的file://协议的URL，将其转换为data URL
     if (settings.type === 'custom' && settings.imageUrl && settings.imageUrl.startsWith('file://')) {
       try {
         // 從file://URL中提取路徑
         const imagePath = settings.imageUrl.replace('file://', '')
-        
+
         // 检查文件是否存在
         if (fs.existsSync(imagePath)) {
           // 读取文件并转换为data URL
@@ -373,7 +394,7 @@ function loadBackgroundSettings() {
         // 保持原样，依赖于webSecurity: false设置
       }
     }
-    
+
     return settings
   } catch (error) {
     logger.logError(`加载背景设置时出错: ${error.message}`)
@@ -406,4 +427,4 @@ module.exports = {
   saveBackgroundSettings,
   loadBackgroundSettings,
   ensureImagesDirectory
-} 
+}

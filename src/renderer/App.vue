@@ -14,8 +14,8 @@
           <template #header>
             <div class="card-header" @click="toggleSection('url')">
               <h2>網站網址</h2>
-              <el-button 
-                link 
+              <el-button
+                link
                 class="collapse-toggle"
                 @click.stop="toggleSection('url')"
               >
@@ -26,10 +26,10 @@
             </div>
           </template>
           <div class="card-content" v-show="isUrlSectionExpanded">
-            <UrlInput 
-              ref="urlInputRef" 
-              v-model="urls" 
-              :external-save-path="savePath" 
+            <UrlInput
+              ref="urlInputRef"
+              v-model="urls"
+              :external-save-path="settingsStore.savePath"
               @start-scraping="startScraping()"
             />
           </div>
@@ -40,8 +40,8 @@
           <template #header>
             <div class="card-header" @click="toggleSection('schedule')">
               <h2>定時設置</h2>
-              <el-button 
-                link 
+              <el-button
+                link
                 class="collapse-toggle"
                 @click.stop="toggleSection('schedule')"
               >
@@ -53,10 +53,7 @@
           </template>
           <div class="card-content" v-show="isScheduleSectionExpanded">
             <ScheduleSettings
-              v-model:schedule="scheduleSettings"
-              :is-running="isScheduleRunning"
-              :next-run-time="nextRunTime"
-              @toggle-schedule="toggleSchedule"
+              :use-store="true"
             />
           </div>
         </el-card>
@@ -66,8 +63,8 @@
           <template #header>
             <div class="card-header" @click="toggleSection('savePath')">
               <h2>儲存設置</h2>
-              <el-button 
-                link 
+              <el-button
+                link
                 class="collapse-toggle"
                 @click.stop="toggleSection('savePath')"
               >
@@ -78,10 +75,8 @@
             </div>
           </template>
           <div class="card-content" v-show="isSavePathSectionExpanded">
-            <SavePathSettings 
-              v-model="savePath" 
-              v-model:append-mode="appendMode" 
-              v-model:filename="customFilename"
+            <SavePathSettings
+              :use-store="true"
             />
           </div>
         </el-card>
@@ -91,8 +86,8 @@
           <template #header>
             <div class="card-header" @click="toggleSection('background')">
               <h2>背景設置</h2>
-              <el-button 
-                link 
+              <el-button
+                link
                 class="collapse-toggle"
                 @click.stop="toggleSection('background')"
               >
@@ -103,8 +98,8 @@
             </div>
           </template>
           <div class="card-content" v-show="isBackgroundSectionExpanded">
-            <BackgroundSettings 
-              v-model="backgroundSettings"
+            <BackgroundSettings
+              v-model="settingsStore.backgroundSettings"
               @apply="applyBackgroundSettings"
             />
           </div>
@@ -119,8 +114,8 @@
                 <el-button type="info" @click.stop="clearLogs" v-if="isLogSectionExpanded">
                   清空日誌
                 </el-button>
-                <el-button 
-                  link 
+                <el-button
+                  link
                   class="collapse-toggle"
                   @click.stop="toggleSection('log')"
                 >
@@ -157,6 +152,13 @@ import SavePathSettings from './components/SavePathSettings.vue'
 import BackgroundSettings from './components/BackgroundSettings.vue'
 import type { LogMessage } from './types'
 
+// Import stores
+import { useSettingsStore } from './stores/settingsStore'
+import { useUrlStore } from './stores/urlStore'
+import { useScrapingStore } from './stores/scrapingStore'
+import { useScheduleStore } from './stores/scheduleStore'
+import { useUiStore } from './stores/uiStore'
+
 // =========================================================
 // Environment variables and constants
 // =========================================================
@@ -168,6 +170,15 @@ const version = import.meta.env.VITE_APP_VERSION
 // =========================================================
 const urlInputRef = ref<InstanceType<any> | null>(null)
 const logViewerRef = ref()
+
+// =========================================================
+// Store instances
+// =========================================================
+const settingsStore = useSettingsStore()
+const urlStore = useUrlStore()
+const scrapingStore = useScrapingStore()
+const scheduleStore = useScheduleStore()
+const uiStore = useUiStore()
 
 // =========================================================
 // State management
@@ -186,26 +197,6 @@ const isSavePathSectionExpanded = ref(true)
 const isBackgroundSectionExpanded = ref(false)
 const isLogSectionExpanded = ref(true)
 
-// Settings
-const scheduleSettings = ref({
-  scheduleType: 'weekly',
-  day: '五',
-  hour: '18',
-  minute: '00',
-  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-})
-
-const savePath = ref('')
-const appendMode = ref(true)
-const customFilename = ref('')
-
-const backgroundSettings = ref({
-  type: 'default',
-  imageUrl: '',
-  opacity: 0.8,
-  blur: 0
-})
-
 // =========================================================
 // Computed properties
 // =========================================================
@@ -215,17 +206,19 @@ const backgroundSettings = ref({
  * @returns {Object} CSS style object
  */
 const backgroundStyle = computed(() => {
-  if (backgroundSettings.value.type === 'default') {
+  const settings = settingsStore.backgroundSettings
+
+  if (settings.type === 'default') {
     return {}
-  } else if (backgroundSettings.value.type === 'custom' && backgroundSettings.value.imageUrl) {
+  } else if (settings.type === 'custom' && settings.imageUrl) {
     return {
-      backgroundImage: `url(${backgroundSettings.value.imageUrl})`,
+      backgroundImage: `url(${settings.imageUrl})`,
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       backgroundRepeat: 'no-repeat',
       backgroundAttachment: 'fixed',
-      '--bg-opacity': backgroundSettings.value.opacity,
-      '--bg-blur': `${backgroundSettings.value.blur}px`
+      '--bg-opacity': settings.opacity,
+      '--bg-blur': `${settings.blur}px`
     }
   }
   return {}
@@ -243,58 +236,24 @@ const toggleSection = (section: string) => {
   switch (section) {
     case 'url':
       isUrlSectionExpanded.value = !isUrlSectionExpanded.value
-      saveCollapseState('url', isUrlSectionExpanded.value)
+      uiStore.saveCollapseState('url', isUrlSectionExpanded.value)
       break
     case 'schedule':
       isScheduleSectionExpanded.value = !isScheduleSectionExpanded.value
-      saveCollapseState('schedule', isScheduleSectionExpanded.value)
+      uiStore.saveCollapseState('schedule', isScheduleSectionExpanded.value)
       break
     case 'savePath':
       isSavePathSectionExpanded.value = !isSavePathSectionExpanded.value
-      saveCollapseState('savePath', isSavePathSectionExpanded.value)
+      uiStore.saveCollapseState('savePath', isSavePathSectionExpanded.value)
       break
     case 'background':
       isBackgroundSectionExpanded.value = !isBackgroundSectionExpanded.value
-      saveCollapseState('background', isBackgroundSectionExpanded.value)
+      uiStore.saveCollapseState('background', isBackgroundSectionExpanded.value)
       break
     case 'log':
       isLogSectionExpanded.value = !isLogSectionExpanded.value
-      saveCollapseState('log', isLogSectionExpanded.value)
+      uiStore.saveCollapseState('log', isLogSectionExpanded.value)
       break
-  }
-}
-
-/**
- * Saves section collapse state to localStorage
- * @param {string} section - The section identifier
- * @param {boolean} isExpanded - Whether the section is expanded
- */
-const saveCollapseState = (section: string, isExpanded: boolean) => {
-  try {
-    localStorage.setItem(`section-${section}-expanded`, String(isExpanded))
-  } catch (error) {
-    console.error('Failed to save collapse state:', error)
-  }
-}
-
-/**
- * Loads collapse states from localStorage
- */
-const loadCollapseStates = () => {
-  try {
-    const urlExpanded = localStorage.getItem('section-url-expanded')
-    const scheduleExpanded = localStorage.getItem('section-schedule-expanded')
-    const savePathExpanded = localStorage.getItem('section-savePath-expanded')
-    const backgroundExpanded = localStorage.getItem('section-background-expanded')
-    const logExpanded = localStorage.getItem('section-log-expanded')
-
-    if (urlExpanded !== null) isUrlSectionExpanded.value = urlExpanded === 'true'
-    if (scheduleExpanded !== null) isScheduleSectionExpanded.value = scheduleExpanded === 'true'
-    if (savePathExpanded !== null) isSavePathSectionExpanded.value = savePathExpanded === 'true'
-    if (backgroundExpanded !== null) isBackgroundSectionExpanded.value = backgroundExpanded === 'true'
-    if (logExpanded !== null) isLogSectionExpanded.value = logExpanded === 'true'
-  } catch (error) {
-    console.error('Failed to load collapse states:', error)
   }
 }
 
@@ -306,23 +265,7 @@ const loadCollapseStates = () => {
  * Apply and save background settings
  */
 const applyBackgroundSettings = () => {
-  saveBackgroundSettings()
-}
-
-/**
- * Save background settings to the main process
- */
-const saveBackgroundSettings = () => {
-  // Create a safe copy of the settings object with only the needed properties
-  const safeSettings = {
-    type: backgroundSettings.value.type || 'default',
-    imageUrl: backgroundSettings.value.imageUrl || '',
-    opacity: typeof backgroundSettings.value.opacity === 'number' ? backgroundSettings.value.opacity : 0.8,
-    blur: typeof backgroundSettings.value.blur === 'number' ? backgroundSettings.value.blur : 0
-  }
-  
-  // Send the safe settings object to the main process
-  window.electron.send('save-background-settings', safeSettings)
+  settingsStore.saveBackgroundSettings()
 }
 
 /**
@@ -332,7 +275,7 @@ const saveBackgroundSettings = () => {
 const startScraping = async (forceAppend = false) => {
   console.log('Starting scraping process')
   console.log('URLs:', urls.value)
-  console.log('Append mode:', forceAppend || appendMode.value)
+  console.log('Append mode:', forceAppend || settingsStore.appendMode)
 
   if (!urls.value) {
     ElMessage.warning('Please enter at least one URL')
@@ -349,11 +292,11 @@ const startScraping = async (forceAppend = false) => {
     // Execute invoke, success means scraping has started
     const result = await window.electron.invoke('start-scraping', {
       urls: urlList,
-      savePath: savePath.value,
-      appendMode: forceAppend || appendMode.value,
-      customFilename: customFilename.value
+      savePath: settingsStore.savePath,
+      appendMode: forceAppend || settingsStore.appendMode,
+      customFilename: settingsStore.customFilename
     })
-    
+
     // Check result, if successful show success message and stop loading state
     if (result && result.success) {
       console.log('Scraping completed successfully:', result)
@@ -377,8 +320,8 @@ const toggleSchedule = () => {
       ElMessage.warning('Please enter URLs to scrape first')
       return
     }
-    
-    window.electron.send('start-schedule', { ...scheduleSettings.value })
+
+    window.electron.send('start-schedule', { ...scheduleStore.settings })
     isScheduleRunning.value = true
   } else {
     window.electron.send('stop-schedule')
@@ -404,23 +347,23 @@ const saveUrls = () => {
  * Save schedule settings to storage
  */
 const saveScheduleSettings = () => {
-  window.electron.send('save-schedule-settings', { ...scheduleSettings.value })
+  window.electron.send('save-schedule-settings', { ...scheduleStore.settings })
 }
 
 /**
  * Save the output file path to storage
  */
 const saveSavePath = () => {
-  console.log('Saving output path:', savePath.value)
-  window.electron.send('save-save-path', savePath.value)
+  console.log('Saving output path:', settingsStore.savePath)
+  settingsStore.saveSavePath()
 }
 
 /**
  * Save custom filename to storage
  */
 const saveCustomFilename = () => {
-  console.log('Saving custom filename:', customFilename.value)
-  window.electron.send('save-custom-filename', customFilename.value)
+  console.log('Saving custom filename:', settingsStore.customFilename)
+  settingsStore.saveCustomFilename()
 }
 
 /**
@@ -429,42 +372,8 @@ const saveCustomFilename = () => {
 const saveAllSettings = () => {
   saveUrls()
   saveScheduleSettings()
-  saveSavePath()
-  saveBackgroundSettings()
-  saveCustomFilename()
+  settingsStore.saveAllSettings()
 }
-
-// =========================================================
-// Watchers
-// =========================================================
-
-// Watch for save path changes
-watch(savePath, (newValue, oldValue) => {
-  // Only save when value actually changes
-  if (newValue !== oldValue) {
-    console.log('Save path changed:', { newValue, oldValue })
-    saveSavePath()
-  }
-})
-
-// Watch for background settings changes
-watch(backgroundSettings, () => {
-  saveBackgroundSettings()
-}, { deep: true })
-
-// Watch for custom filename changes
-watch(customFilename, (newValue, oldValue) => {
-  // Only save when value actually changes
-  if (newValue !== oldValue) {
-    console.log('Custom filename changed:', { newValue, oldValue })
-    saveCustomFilename()
-  }
-})
-
-// Watch for schedule settings changes
-watch(scheduleSettings, () => {
-  saveScheduleSettings()
-}, { deep: true })
 
 // =========================================================
 // Lifecycle hooks
@@ -472,42 +381,29 @@ watch(scheduleSettings, () => {
 
 onMounted(async () => {
   // Load UI section collapse states
-  loadCollapseStates()
-  
+  uiStore.loadCollapseStates()
+
   try {
     // Load saved settings from main process
     urls.value = await window.electron.invoke('load-urls')
-    
+
+    // Load settings from store
+    await settingsStore.loadSettings()
+
+    // Load schedule settings
     const savedSettings = await window.electron.invoke('load-schedule-settings')
-    scheduleSettings.value = savedSettings
-    
-    const savedPath = await window.electron.invoke('load-save-path')
-    console.log('Loaded save path:', savedPath)
-    savePath.value = savedPath
-    
-    try {
-      const savedBackgroundSettings = await window.electron.invoke('load-background-settings')
-      if (savedBackgroundSettings) {
-        backgroundSettings.value = savedBackgroundSettings
-      }
-    } catch (error) {
-      console.error('Failed to load background settings:', error)
-      // If loading fails, use default settings (already set)
-    }
-    
-    try {
-      const savedFilename = await window.electron.invoke('load-custom-filename')
-      console.log('Loaded custom filename:', savedFilename)
-      customFilename.value = savedFilename
-    } catch (error) {
-      console.error('Failed to load custom filename:', error)
-    }
+    scheduleStore.settings = savedSettings
+
+    // These settings are now handled by settingsStore
+    // savePath.value = settingsStore.savePath;
+    // customFilename.value = settingsStore.customFilename;
+    // backgroundSettings.value = settingsStore.backgroundSettings;
   } catch (error) {
     console.error('Failed to load settings:', error)
   }
-  
+
   // Set up event listeners for IPC events
-  
+
   // Log message event
   window.electron.on('log-message', (message: string) => {
     logs.value.push({
@@ -515,29 +411,29 @@ onMounted(async () => {
       message
     })
   })
-  
+
   // Scraping complete event
   window.electron.on('scraping-complete', () => {
     console.log('Received scraping-complete event')
     urlInputRef.value?.setLoading(false)
     ElMessage.success('Scraping completed')
   })
-  
+
   // Scraping error event
   window.electron.on('scraping-error', (error: string) => {
     urlInputRef.value?.setLoading(false)
     ElMessage.error(error)
   })
-  
+
   // Schedule trigger event
   window.electron.on('schedule-trigger', () => {
     console.log('Received schedule-trigger event')
     console.log('Current URLs:', urls.value)
     // Scheduled tasks always use append mode
-    console.log('Scheduled task append mode:', appendMode.value ? 'enabled' : 'forced enabled')
+    console.log('Scheduled task append mode:', settingsStore.appendMode ? 'enabled' : 'forced enabled')
     startScraping(true)
   })
-  
+
   // Next run time update event
   window.electron.on('next-run-time', (time: string) => {
     nextRunTime.value = time
@@ -578,7 +474,7 @@ onUnmounted(() => {
   --bg-color: #f8f8f9;
   --card-bg: #ffffff;
   --header-bg: #2b85e4;
-  
+
   /* Effects */
   --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   --bg-opacity: 0.8;
@@ -589,12 +485,12 @@ onUnmounted(() => {
 /* =========================================================
    Layout and containers
    ========================================================= */
-   
+
 /* Main container */
 .app-container {
   min-height: 100vh;
   background-color: #f5f7fa;
-  background-image: 
+  background-image:
     linear-gradient(135deg, rgba(43, 133, 228, 0.05) 0%, rgba(235, 245, 255, 0.7) 100%),
     radial-gradient(circle at 15% 85%, rgba(255, 153, 0, 0.05) 0%, transparent 50%),
     radial-gradient(circle at 85% 15%, rgba(25, 190, 107, 0.05) 0%, transparent 50%);
@@ -728,7 +624,7 @@ onUnmounted(() => {
 
 /* Card content transition */
 .card-content {
-  transition: max-height var(--transition-duration) ease, 
+  transition: max-height var(--transition-duration) ease,
               opacity var(--transition-duration) ease,
               padding var(--transition-duration) ease;
   overflow: hidden;
@@ -944,19 +840,19 @@ onUnmounted(() => {
   .main-content {
     padding: 16px;
   }
-  
+
   .header-content h1 {
     font-size: 1.2rem;
   }
-  
+
   .section-card {
     margin-bottom: 16px;
   }
-  
+
   .card-header h2 {
     font-size: 1rem;
   }
-  
+
   .app-footer {
     padding: 16px;
     font-size: 0.8rem;
@@ -967,13 +863,13 @@ onUnmounted(() => {
   .main-content {
     padding: 12px;
   }
-  
+
   .section-card .el-card__header {
     padding: 12px 16px;
   }
-  
+
   .section-card .el-card__body {
     padding: 12px;
   }
 }
-</style> 
+</style>

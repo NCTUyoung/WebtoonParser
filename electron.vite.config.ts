@@ -18,11 +18,22 @@ export default defineConfig({
           'src/main/managers/file-manager.js',
           'src/main/managers/navigation-manager.js',
           'src/main/scraper/webtoon-scraper.js',
-          'src/main/scraper/excel-manager.js',
           'src/main/utils/file-helper.js',
           'src/main/scraper/request-throttler.js',
           'src/main/utils/utils.js',
-          'src/main/scraper/webtoon-module.js'
+          'src/main/scraper/webtoon-module.js',
+          'src/main/excel-integration.js',
+          'src/main/excel/index.js',
+          'src/main/excel/core/ExcelManager.js',
+          'src/main/excel/core/WorkbookProcessor.js',
+          'src/main/excel/core/ExcelService.js',
+          'src/main/excel/config/excel-config.js',
+          'src/main/excel/utils/WorksheetBuilder.js',
+          'src/main/excel/strategies/BaseStrategy.js',
+          'src/main/excel/strategies/WebtoonStrategy.js',
+          'src/main/excel/strategies/NovelStrategy.js',
+          'src/main/excel/strategies/StrategyFactory.js',
+          'src/main/excel-cli.js'
         ],
         output: {
           format: 'cjs',
@@ -63,4 +74,4 @@ export default defineConfig({
       outDir: 'out/renderer'
     }
   }
-}) 
+})

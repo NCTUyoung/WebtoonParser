@@ -12,10 +12,11 @@ src/
 │   │   └── config.js     # 應用配置（選擇器、延遲等）
 │   ├── scraper/          # 抓取相關邏輯
 │   │   ├── webtoon-scraper.js # 核心 Webtoon 抓取類
-│   │   ├── scraping-manager.js # 管理抓取任務隊列與狀態
-│   │   ├── excel-manager.js   # Excel 文件生成與管理
-│   │   └── request-throttler.js # 請求節流器
+│   │   ├── KadoKadoScraper.js # 小說網站抓取類
+│   │   ├── request-throttler.js # 請求節流器
+│   │   └── excel-integration.js  # Excel 整合邏輯
 │   ├── managers/         # 功能管理器
+│   │   ├── scraping-manager.js # 抓取管理器
 │   │   ├── schedule-manager.js  # 定時任務管理
 │   │   ├── storage-manager.js   # 應用數據存儲 (配置, URL歷史)
 │   │   ├── window-manager.js    # 窗口創建與管理
@@ -28,12 +29,25 @@ src/
 ├── renderer/             # 渲染進程 (UI)
 │   ├── App.vue           # 主界面組件 (卡片式佈局)
 │   ├── components/       # UI 原子組件
-│   │   ├── UrlInput.vue
+│   │   ├── UrlInput.vue    # URL 輸入組件
+│   │   ├── url-input/      # URL 輸入相關子組件
+│   │   │   ├── UrlHistoryDialog.vue
+│   │   │   ├── UrlHelpGuide.vue
+│   │   │   ├── UrlHistorySelector.vue
+│   │   │   ├── UrlActionFooter.vue
+│   │   │   └── UrlErrorMessage.vue
 │   │   ├── ScheduleSettings.vue
 │   │   ├── SavePathSettings.vue
 │   │   ├── LogViewer.vue
 │   │   └── BackgroundSettings.vue # 背景設置組件
+│   ├── stores/           # Pinia 狀態管理
+│   │   ├── settingsStore.ts
+│   │   ├── urlStore.ts
+│   │   ├── scrapingStore.ts
+│   │   ├── scheduleStore.ts
+│   │   └── uiStore.ts
 │   ├── utils/            # 渲染進程工具函數
+│   │   └── urlUtils.ts   # URL 相關工具函數
 │   ├── types/            # TypeScript 類型定義
 │   ├── styles/           # CSS 樣式文件
 │   ├── main.js           # 渲染進程入口 (Vue 初始化)
@@ -46,13 +60,14 @@ src/
 
 主進程負責應用程序的核心邏輯、窗口管理和系統交互。
 
-- **core/**: 處理應用初始化 (`index.js`) 和加載配置 (`config.js`)。
+- **core/**: 處理應用初始化 (`index.js`) 和加載配置 (`config.js`)。配置文件中定義了各種網站的選擇器、請求設置和應用默認值。
 - **scraper/**: 包含抓取相關的所有模塊：
-  - `webtoon-scraper.js`: 實現單個 Webtoon URL 的數據獲取、解析和處理分页。
-  - `scraping-manager.js`: 協調抓取任務，可能包含隊列管理和並發控制。
-  - `excel-manager.js`: 負責使用 `exceljs` 生成格式化的 Excel 文件。
-  - `request-throttler.js`: 控制對 Webtoon 網站的請求頻率，避免過快請求。
+  - `webtoon-scraper.js`: 實現 Webtoon 漫畫網站的數據獲取、解析和處理分页。
+  - `KadoKadoScraper.js`: 實現 KadoKado 小說網站的數據獲取和解析。
+  - `request-throttler.js`: 控制對網站的請求頻率，避免過快請求導致被封。
+  - `excel-integration.js`: 負責 Excel 生成和數據導出的邏輯整合。
 - **managers/**: 包含各個獨立功能的管理器：
+  - `scraping-manager.js`: 協調抓取任務，支持不同網站類型的識別和相應處理。
   - `schedule-manager.js`: 使用 `node-schedule` 創建、管理和持久化定時任務。
   - `storage-manager.js`: 使用 `electron-store` 讀寫應用配置、URL 歷史等本地數據。
   - `window-manager.js`: 創建和管理 Electron `BrowserWindow`。
@@ -64,10 +79,21 @@ src/
 
 渲染進程負責用戶界面的呈現和用戶交互，使用 Vue.js 和 Element Plus 構建。
 
-- **App.vue**: 主 Vue 組件，使用 Element Plus 的卡片式佈局 (`el-card`) 組織各個功能區域，並管理應用程序的整體狀態。
-- **components/**: 包含可重用的 UI 組件，如 `UrlInput`, `ScheduleSettings`, `SavePathSettings`, `LogViewer`, 和 `BackgroundSettings`。
+- **App.vue**: 主 Vue 組件，使用 Element Plus 的卡片式佈局 (`el-card`) 組織各個功能區域，支持模塊展開/折疊。
+- **components/**: 包含可重用的 UI 組件，組織結構更加模块化：
+  - `UrlInput.vue` 及其子組件: 處理URL輸入、歷史記錄和URL管理相關功能。
+  - `ScheduleSettings.vue`: 定時抓取設置。
+  - `SavePathSettings.vue`: 文件保存路徑設置。
+  - `LogViewer.vue`: 日誌查看器。
+  - `BackgroundSettings.vue`: 應用背景設置。
+- **stores/**: 使用 Pinia 進行狀態管理，將應用狀態分為多個邏輯模塊：
+  - `settingsStore.ts`: 管理應用設置如保存路徑、背景設置。
+  - `urlStore.ts`: 管理 URL 輸入和歷史。
+  - `scrapingStore.ts`: 管理抓取相關狀態。
+  - `scheduleStore.ts`: 管理定時任務狀態。
+  - `uiStore.ts`: 管理 UI 狀態如展開/折疊狀態。
 - **utils/**, **types/**, **styles/**: 分別包含渲染進程的工具函數、TypeScript 類型定義和 CSS 樣式。
-- **main.js**: Vue 應用程序的入口點，初始化 Vue 實例和插件。
+- **main.js**: Vue 應用程序的入口點，初始化 Vue 實例和 Pinia 狀態管理。
 
 ### 3. 預加載腳本 (src/preload)
 
@@ -80,6 +106,7 @@ src/
 | **框架** | [Electron](https://www.electronjs.org/) | 跨平台桌面應用開發框架 |
 | **前端** | [Vue.js](https://vuejs.org/) | 漸進式 JavaScript 框架 |
 |      | [Element Plus](https://element-plus.org/) | 基於 Vue 3 的 UI 組件庫 |
+|      | [Pinia](https://pinia.vuejs.org/) | Vue 的狀態管理庫 |
 | **後端 (Node.js)** | [Node.js](https://nodejs.org/) | JavaScript 運行時環境 |
 | **構建** | [Vite](https://vitejs.dev/) | 前端構建工具，與 `electron-vite` 結合 |
 | **數據抓取** | [Axios](https://axios-http.com/) | HTTP 客戶端 |

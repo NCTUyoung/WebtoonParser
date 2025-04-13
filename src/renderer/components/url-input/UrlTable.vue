@@ -27,7 +27,7 @@
           </div>
         </template>
       </el-table-column>
-      
+
       <el-table-column label="網址" min-width="300">
         <template #default="{ row }">
           <div class="url-cell">
@@ -67,7 +67,7 @@
           </div>
         </template>
       </el-table-column>
-      
+
       <el-table-column label="操作" width="150" align="center">
         <template #default="{ row, $index }">
           <div class="action-cell">
@@ -103,7 +103,7 @@
 import { ref, computed, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Edit, CopyDocument, Link, Star, Delete, Plus } from '@element-plus/icons-vue'
-import { generateLabelFromUrl } from '@/utils/urlUtils'
+import { generateLabelFromUrl } from '../../utils/urlUtils'
 
 interface HistoryItem {
   url: string
@@ -125,8 +125,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits([
-  'update:data', 
-  'delete-item', 
+  'update:data',
+  'delete-item',
   'open-url',
   'add-to-input'
 ])
@@ -136,10 +136,10 @@ const labelInput = ref<HTMLInputElement | null>(null)
 // 过滤后的数据
 const filteredData = computed(() => {
   if (!props.searchQuery) return props.data
-  
+
   const query = props.searchQuery.toLowerCase()
-  return props.data.filter(item => 
-    (item.label && item.label.toLowerCase().includes(query)) || 
+  return props.data.filter(item =>
+    (item.label && item.label.toLowerCase().includes(query)) ||
     item.url.toLowerCase().includes(query)
   )
 })
@@ -150,11 +150,11 @@ const startEditing = (row: HistoryItem) => {
   props.data.forEach(item => {
     item.editing = false
   })
-  
+
   // 设置当前行为编辑状态
   row.editing = true
   row.editLabel = row.label || ''
-  
+
   // 等待DOM更新后聚焦输入框
   nextTick(() => {
     if (labelInput.value) {
@@ -172,18 +172,18 @@ const saveLabel = (row: HistoryItem) => {
         url: item.url,
         label: item.label
       }
-      
+
       // 如果是當前編輯的行，更新標籤
       if (item.url === row.url && row.editLabel !== undefined) {
         cleanItem.label = row.editLabel.trim()
       }
-      
+
       return cleanItem
     })
-    
+
     // 更新數據
     emit('update:data', newData)
-    
+
     // 在本地更新編輯狀態（不會傳遞到父組件）
     row.editing = false
   }
@@ -192,22 +192,22 @@ const saveLabel = (row: HistoryItem) => {
 // 生成标签
 const generateLabel = (row: HistoryItem) => {
   const label = generateLabelFromUrl(row.url)
-  
+
   const newData = [...props.data].map(item => {
     // 創建不包含editing和editLabel屬性的新對象
     const cleanItem = {
       url: item.url,
       label: item.label
     }
-    
+
     // 如果是當前行，更新標籤
     if (item.url === row.url) {
       cleanItem.label = label
     }
-    
+
     return cleanItem
   })
-  
+
   emit('update:data', newData)
   ElMessage.success(`已生成標籤: ${label}`)
 }
@@ -377,4 +377,4 @@ watch(() => props.data, () => {
 :deep(.el-table__body tr.current-row > td) {
   background-color: #ecf5ff;
 }
-</style> 
+</style>

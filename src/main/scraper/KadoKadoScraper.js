@@ -1,7 +1,7 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const Utils = require('../utils/utils');
-const ExcelManager = require('./excel-manager');
+const excelIntegration = require('../excel-integration');
 const RequestThrottler = require('./request-throttler');
 const { siteSelectors } = require('../core/config'); // 只導入需要的選擇器
 const config = require('../core/config'); // 完整配置用於其他設置
@@ -16,7 +16,7 @@ class KadoKadoScraper {
     };
 
     this.log = logFunction || Utils.createDefaultLogger();
-    this.excelManager = new ExcelManager(this.log);
+    this.excelManager = excelIntegration.getExcelManager(this.log);
 
     // 創建請求節流器
     this.pageThrottler = new RequestThrottler(
@@ -159,14 +159,26 @@ class KadoKadoScraper {
   async saveToExcel(info, chapters, externalSavePath, append = false, customFilename = null) {
     this.log(`开始保存 KadoKado 数据到 Excel...`);
     try {
-      return await this.excelManager.saveWorkbook(
+      const result = await this.excelManager.saveWorkbook({
         info,
         chapters,
-        externalSavePath,
+        savePath: externalSavePath,
         append,
-        true, // isNovel = true
-        customFilename
-      );
+        isNovel: true,
+        filename: customFilename
+      });
+      
+      // 提取文件路径并记录行添加情况
+      const filePath = result.filePath;
+      this.log(`Excel文件已保存到: ${filePath}`);
+      
+      if (result.rowAdded) {
+        this.log(`成功添加数据行。行数: ${result.initialRowCount} -> ${result.finalRowCount}`);
+      } else {
+        this.log(`警告: 数据行可能未被正确添加到工作表: ${result.worksheetName}`);
+      }
+      
+      return filePath;
     } catch (error) {
       this.log(`保存 KadoKado 数据时出错: ${error.message}`);
       throw error;

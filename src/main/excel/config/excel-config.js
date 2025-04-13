@@ -1,34 +1,62 @@
-/**
- * Excel 配置文件
- * 包含 Excel 生成相關的所有配置參數
- */
+// Excel Configuration File
+// Contains all configuration parameters for Excel generation
 
 module.exports = {
-  // Excel 基本配置
+  // Excel basic configuration
   sheetNameMaxLength: 31,
   authorMaxLength: 20,
-  
-  // 列定義
+
+  // Column definitions
   columns: {
-    common: [
-      { key: 'date', header: 'Date', width: 20 },
-      { key: 'author', header: 'Author', width: 20 }
-    ],
-    webtoon: [
-      { key: 'views', header: 'Total Views', width: 15 },
-      { key: 'subscribers', header: 'Subscribers', width: 15 },
-      { key: 'rating', header: 'Rating', width: 10 }
-    ],
-    novel: [
-      { key: 'views', header: 'Total Views', width: 15 },
-      { key: 'likes', header: 'Likes', width: 15 },
-      { key: 'status', header: 'Status', width: 15 },
-      { key: 'totalChapters', header: 'Total Chapters', width: 15 },
-      { key: 'totalWords', header: 'Total Words', width: 15 }
-    ]
+    webtoon: {
+      required: ['date', 'author', 'views', 'subscribers', 'rating'],
+      widths: {
+        date: 20,
+        author: 20,
+        views: 15,
+        subscribers: 15,
+        rating: 10,
+        default: 10
+      }
+    },
+    novel: {
+      required: ['date', 'author', 'views', 'likes', 'status', 'totalChapters', 'totalWords'],
+      widths: {
+        date: 20,
+        author: 20,
+        views: 15,
+        likes: 15,
+        status: 15,
+        totalChapters: 15,
+        totalWords: 15,
+        default: 10
+      }
+    }
   },
-  
-  // 章節列格式
+
+  // Style definitions
+  styles: {
+    headerFont: { bold: true },
+    headerFill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } },
+    headerBorder: {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' }
+    },
+    headerAlignment: { vertical: 'middle', horizontal: 'center' },
+
+    cellFont: { name: 'Arial' },
+    cellBorder: {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' }
+    },
+    hyperlinkFont: { color: { argb: 'FF0000FF' }, underline: true }
+  },
+
+  // Chapter column formats
   chapterFormats: {
     webtoon: {
       headerPrefix: 'CH',
@@ -39,8 +67,8 @@ module.exports = {
       regex: /^WORDS_CH(\d+)$/i
     }
   },
-  
-  // 文件命名
+
+  // File naming
   filenameFormats: {
     webtoon: {
       default: 'webtoon_stats_{date}.xlsx',
@@ -51,7 +79,7 @@ module.exports = {
       append: 'novel_stats_daily_append.xlsx'
     }
   },
-  
-  // 保存嘗試次數
+
+  // Save attempts
   maxSaveAttempts: 3
-}; 
+};

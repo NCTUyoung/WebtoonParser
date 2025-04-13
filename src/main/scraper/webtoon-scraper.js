@@ -1,7 +1,7 @@
 const axios = require('axios')
 const cheerio = require('cheerio')
 const Utils = require('../utils/utils')
-const ExcelManager = require('./excel-manager')
+const excelIntegration = require('../excel-integration')
 const RequestThrottler = require('./request-throttler')
 const config = require('../core/config')
 
@@ -15,7 +15,7 @@ class WebtoonScraper {
     }
     
     this.log = logFunction || Utils.createDefaultLogger()
-    this.excelManager = new ExcelManager(this.log)
+    this.excelManager = excelIntegration.getExcelManager(this.log)
     
     // 储存选择器
     this.selectors = config.selectors.webtoon;
@@ -286,9 +286,26 @@ class WebtoonScraper {
   async saveToExcel(info, chapters, externalSavePath, append = false, customFilename) {
     this.log(`Saving Webtoon data to Excel...`)
     try {
-      const filePath = await this.excelManager.saveWorkbook(info, chapters, externalSavePath, append, false, customFilename)
+      const result = await this.excelManager.saveWorkbook({
+        info,
+        chapters,
+        savePath: externalSavePath,
+        append,
+        isNovel: false,
+        filename: customFilename
+      })
+      
+      // 提取文件路径并记录行添加情况
+      const filePath = result.filePath;
       this.log(`Excel file saved to: ${filePath}`)
-      return filePath
+      
+      if (result.rowAdded) {
+        this.log(`Successfully added data row. Rows: ${result.initialRowCount} -> ${result.finalRowCount}`)
+      } else {
+        this.log(`WARNING: Data row may not have been added correctly in worksheet: ${result.worksheetName}`)
+      }
+      
+      return filePath;
     } catch (error) {
       this.log(`Error saving to Excel: ${error.message}`, 'error')
       throw error

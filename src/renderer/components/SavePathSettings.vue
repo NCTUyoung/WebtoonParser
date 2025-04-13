@@ -1,107 +1,153 @@
 <template>
   <div class="save-path-settings">
-    <el-input
-      v-model="displayPath"
-      placeholder="選擇儲存目錄"
-      readonly
-      class="path-input"
-    >
-      <template #append>
-        <el-button @click="selectDirectory">選擇目錄</el-button>
-      </template>
-    </el-input>
-    
-    <el-form label-position="top">
-      <el-form-item label="自定義文件名 (可選)" class="filename-form-item">
-        <div class="filename-input-group">
-          <el-select
-            v-model="selectedExistingFile"
-            placeholder="選擇現有文件"
-            clearable
-            filterable
-            :loading="loadingFiles"
-            @change="handleExistingFileSelect"
-            @focus="refreshFileList"
-            class="existing-file-select"
-            no-data-text="目錄中無 Excel 文件或無法讀取"
-          >
-            <el-option
-              v-for="file in existingFiles"
-              :key="file"
-              :label="file"
-              :value="file"
-              @click="refreshFileList"
-            />
-          </el-select>
-          
-          <el-input 
-            v-model="internalFilename" 
-            placeholder="或輸入新文件名 (不含 .xlsx)"
-            clearable
-            class="new-filename-input"
-          />
-        </div>
-         <div class="el-form-item__description">
-          選擇或輸入文件名。若留空，將使用默認命名規則。
-        </div>
-      </el-form-item>
+    <!-- Save path selection area -->
+    <div class="settings-section path-section">
+      <div class="section-header">
+        <h3>儲存位置</h3>
+      </div>
+      <el-input
+        v-model="displayPath"
+        placeholder="選擇儲存目錄"
+        readonly
+        class="path-input"
+      >
+        <template #append>
+          <el-button @click="selectDirectory">選擇目錄</el-button>
+        </template>
+      </el-input>
+    </div>
 
-      <el-form-item label="儲存模式" class="append-mode-form-item">
-        <div class="append-mode-container">
-          <el-switch
-            v-model="appendModeLocal"
-            @change="updateAppendMode"
-            active-color="#13ce66"
-            inactive-color="#909399"
-            active-text="附加模式"
-            inactive-text="覆蓋模式"
-          />
-          <el-tooltip content="附加模式會將新數據添加到現有Excel文件中，而不是覆蓋它" placement="top">
-            <el-icon class="help-icon"><QuestionFilled /></el-icon>
-          </el-tooltip>
+    <!-- File settings area -->
+    <div class="settings-section file-section">
+      <div class="section-header">
+        <h3>檔案設定</h3>
+      </div>
+
+      <div class="settings-content">
+        <!-- Filename settings -->
+        <div class="filename-setting">
+          <div class="setting-label">
+            <span>檔案名稱</span>
+            <el-tooltip content="留空使用默認命名規則。如選擇現有檔案則會更新該檔案。" placement="top">
+              <el-icon class="help-icon"><QuestionFilled /></el-icon>
+            </el-tooltip>
+          </div>
+
+          <div class="filename-controls">
+            <el-input
+              v-model="customFilename"
+              placeholder="輸入檔案名稱 (不含 .xlsx)"
+              clearable
+              class="filename-input"
+            >
+              <template #append>
+                <el-popover
+                  placement="bottom"
+                  :width="300"
+                  trigger="click"
+                  popper-class="files-popover"
+                >
+                  <template #reference>
+                    <el-button :disabled="!existingFiles.length">
+                      選擇現有檔案
+                      <el-icon v-if="loadingFiles" class="is-loading"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M512 64a32 32 0 0 1 32 32v192a32 32 0 0 1-64 0V96a32 32 0 0 1 32-32zm0 640a32 32 0 0 1 32 32v192a32 32 0 1 1-64 0V736a32 32 0 0 1 32-32zm448-192a32 32 0 0 1-32 32H736a32 32 0 1 1 0-64h192a32 32 0 0 1 32 32zm-640 0a32 32 0 0 1-32 32H96a32 32 0 0 1 0-64h192a32 32 0 0 1 32 32zM195.2 195.2a32 32 0 0 1 45.248 0L376.32 331.008a32 32 0 0 1-45.248 45.248L195.2 240.448a32 32 0 0 1 0-45.248zm452.544 452.544a32 32 0 0 1 45.248 0L828.8 783.552a32 32 0 0 1-45.248 45.248L647.744 692.992a32 32 0 0 1 0-45.248zM828.8 195.264a32 32 0 0 1 0 45.184L692.992 376.32a32 32 0 0 1-45.248-45.248l135.808-135.808a32 32 0 0 1 45.248 0zm-452.544 452.48a32 32 0 0 1 0 45.248L240.448 828.8a32 32 0 0 1-45.248-45.248l135.808-135.808a32 32 0 0 1 45.248 0z"></path></svg></el-icon>
+                    </el-button>
+                  </template>
+
+                  <div class="existing-files-list">
+                    <h4>現有檔案 <el-button size="small" icon="Refresh" circle @click="refreshFileList" /></h4>
+
+                    <div v-if="existingFiles.length === 0" class="no-files">
+                      <p v-if="loadingFiles">正在加載...</p>
+                      <p v-else>目錄中未找到 Excel 檔案</p>
+                    </div>
+
+                    <el-scrollbar max-height="200px">
+                      <div
+                        v-for="file in existingFiles"
+                        :key="file"
+                        class="file-item"
+                        @click="handleExistingFileSelect(file)"
+                      >
+                        <el-icon><Document /></el-icon>
+                        <span>{{ file }}</span>
+                      </div>
+                    </el-scrollbar>
+                  </div>
+                </el-popover>
+              </template>
+            </el-input>
+          </div>
         </div>
-      </el-form-item>
-    </el-form>
+
+        <!-- Save mode settings -->
+        <div class="append-mode-setting">
+          <div class="setting-label">
+            <span>保存模式</span>
+            <el-tooltip content="附加模式會將新數據添加到現有Excel文件中，覆蓋模式會替換原文件內容" placement="top">
+              <el-icon class="help-icon"><QuestionFilled /></el-icon>
+            </el-tooltip>
+          </div>
+
+          <div class="mode-selector">
+            <el-radio-group v-model="modeType" size="large" @change="handleAppendModeChange">
+              <el-radio-button value="append">
+                <el-icon><Plus /></el-icon> 附加模式
+              </el-radio-button>
+              <el-radio-button value="overwrite">
+                <el-icon><Refresh /></el-icon> 覆蓋模式
+              </el-radio-button>
+            </el-radio-group>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue'
-import { QuestionFilled } from '@element-plus/icons-vue'
-import { ElInput, ElButton, ElForm, ElFormItem, ElSwitch, ElSelect, ElOption, ElIcon, ElTooltip } from 'element-plus'
+import { QuestionFilled, Document, Plus, Refresh } from '@element-plus/icons-vue'
+import { ElInput, ElButton, ElTooltip, ElIcon, ElPopover, ElScrollbar, ElRadioGroup, ElRadioButton } from 'element-plus'
+import { useSettingsStore } from '../stores'
 
-const props = defineProps({
-  modelValue: {
-    type: String,
-    default: ''
-  },
-  appendMode: {
-    type: Boolean,
-    default: false
-  },
-  filename: {
-    type: String,
-    default: ''
+// Initialize settings store
+const settingsStore = useSettingsStore()
+
+// Direct use of store state
+const displayPath = computed({
+  get: () => settingsStore.savePath,
+  set: (value) => {
+    settingsStore.savePath = value
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'update:appendMode', 'update:filename'])
+// Convert boolean value to radio button value
+const modeType = computed({
+  get: () => settingsStore.appendMode ? 'append' : 'overwrite',
+  set: (value) => {
+    settingsStore.appendMode = value === 'append'
+  }
+})
 
-const displayPath = ref(props.modelValue)
-const appendModeLocal = ref(props.appendMode)
+const appendMode = computed({
+  get: () => settingsStore.appendMode,
+  set: (value) => {
+    settingsStore.appendMode = value
+  }
+})
+
+const customFilename = computed({
+  get: () => settingsStore.customFilename,
+  set: (value) => {
+    settingsStore.customFilename = value
+    selectedExistingFile.value = ''
+  }
+})
+
 const existingFiles = ref<string[]>([])
 const loadingFiles = ref(false)
 const selectedExistingFile = ref<string>('')
-
-const internalFilename = computed({
-  get: () => props.filename || '',
-  set: (value) => {
-    if (selectedExistingFile.value) {
-      selectedExistingFile.value = ''
-    }
-    emit('update:filename', value)
-  }
-})
 
 const fetchExistingFiles = async (dirPath: string) => {
   if (!dirPath) {
@@ -121,21 +167,23 @@ const fetchExistingFiles = async (dirPath: string) => {
   }
 }
 
-watch(() => props.modelValue, (newValue) => {
-  displayPath.value = newValue
+watch(() => displayPath.value, (newValue) => {
   fetchExistingFiles(newValue)
+  settingsStore.saveSavePath()
 })
 
-watch(() => props.appendMode, (newValue) => {
-  appendModeLocal.value = newValue
-})
-
-watch(() => props.filename, (newValue) => {
+watch(() => customFilename.value, (newValue) => {
   if (existingFiles.value.includes(newValue + '.xlsx')) {
     selectedExistingFile.value = newValue + '.xlsx'
-  } else if (internalFilename.value === newValue) {
+  } else {
     selectedExistingFile.value = ''
   }
+  settingsStore.saveCustomFilename()
+})
+
+// Watch appendMode changes
+watch(() => appendMode.value, () => {
+  settingsStore.saveAppendMode()
 })
 
 const selectDirectory = async () => {
@@ -143,30 +191,22 @@ const selectDirectory = async () => {
     const result = await window.electron.invoke('select-directory')
     if (result) {
       displayPath.value = result
-      emit('update:modelValue', result)
     }
   } catch (error) {
     console.error('Failed to select directory:', error)
   }
 }
 
-const updateAppendMode = () => {
-  console.log('SavePathSettings: 附加模式變更為:', appendModeLocal.value ? '開啟' : '關閉')
-  emit('update:appendMode', appendModeLocal.value)
-  
-  // 保存到 localStorage
-  try {
-    localStorage.setItem('webtoon-parser-append-mode', appendModeLocal.value.toString())
-  } catch (e) {
-    console.error('保存 appendMode 設置失敗', e)
-  }
+const handleAppendModeChange = () => {
+  console.log('SavePathSettings: Append mode changed to:', appendMode.value ? 'on' : 'off')
+  settingsStore.saveAppendMode()
 }
 
-const handleExistingFileSelect = (selectedFile: string | number | boolean | Record<string, any> | undefined) => {
-  const fileStr = selectedFile as string
+const handleExistingFileSelect = (selectedFile: string | any) => {
+  const fileStr = typeof selectedFile === 'string' ? selectedFile : selectedFile?.toString()
   if (fileStr) {
     const filenameWithoutExt = fileStr.replace(/\.xlsx$/i, '')
-    emit('update:filename', filenameWithoutExt)
+    customFilename.value = filenameWithoutExt
   }
 }
 
@@ -177,77 +217,148 @@ const refreshFileList = () => {
 }
 
 onMounted(() => {
-  displayPath.value = props.modelValue
-  appendModeLocal.value = props.appendMode
-  fetchExistingFiles(props.modelValue)
+  // Ensure settings are loaded
+  settingsStore.loadSettings().then(() => {
+    fetchExistingFiles(displayPath.value)
+  })
 })
 </script>
 
 <style scoped>
 .save-path-settings {
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.settings-section {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.section-header {
+  margin-bottom: 12px;
+}
+
+.section-header h3 {
+  font-size: 16px;
+  margin: 0;
+  color: #17233d;
+  font-weight: 500;
 }
 
 .path-input {
   width: 100%;
-  margin-bottom: 12px;
 }
 
-.filename-input-group {
+.settings-content {
   display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.filename-setting, .append-mode-setting {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
-.existing-file-select {
-  flex: 1;
-}
-
-.new-filename-input {
-  flex: 2;
-}
-
-.filename-form-item .el-form-item__description {
-  font-size: 12px;
-  color: #909399;
-  margin-top: 4px;
-  line-height: normal;
-  width: 100%;
-}
-
-.append-mode-form-item {
-  margin-top: 16px;
-}
-
-.append-mode-container {
+.setting-label {
   display: flex;
   align-items: center;
-  gap: 8px;
+  font-size: 14px;
+  color: #606266;
+  gap: 4px;
 }
 
 .help-icon {
   color: #909399;
   font-size: 14px;
   cursor: help;
-  margin-left: 4px;
 }
 
-:deep(.el-switch) {
-  --el-switch-on-color: #13ce66;
-  --el-switch-off-color: #909399;
+.filename-controls {
+  display: flex;
+  gap: 8px;
 }
 
-:deep(.el-switch__label) {
-  color: #606266;
-  font-size: 13px;
+.filename-input {
+  width: 100%;
+}
+
+.mode-selector {
+  padding-top: 6px;
+}
+
+.file-item {
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.file-item:hover {
+  background-color: #f0f7ff;
+}
+
+.file-item .el-icon {
+  color: #409EFF;
+}
+
+.existing-files-list h4 {
+  margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.no-files {
+  padding: 20px;
+  text-align: center;
+  color: #909399;
+}
+
+:deep(.el-radio-button__inner) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 768px) {
+  .mode-selector {
+    width: 100%;
+  }
+
+  :deep(.el-radio-group) {
+    width: 100%;
+    display: flex;
+  }
+
+  :deep(.el-radio-button) {
+    flex: 1;
+  }
+
+  :deep(.el-radio-button__inner) {
+    width: 100%;
+    justify-content: center;
+  }
+}
+</style>
+
+<style>
+/* Global styles */
+.files-popover .el-scrollbar__bar.is-horizontal {
+  display: none;
+}
+
+.files-popover .el-popover__title {
   font-weight: 500;
+  margin-bottom: 12px;
 }
-
-:deep(.el-switch__label.is-active) {
-  color: #13ce66;
-}
-
-:deep(.el-switch.is-checked .el-switch__core) {
-  border-color: #13ce66;
-  background-color: #13ce66;
-}
-</style> 
+</style>

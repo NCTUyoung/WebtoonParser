@@ -1,8 +1,8 @@
 <template>
   <div class="log-container">
     <div class="log-content" ref="logContent">
-      <div v-for="(log, index) in logs" 
-           :key="index" 
+      <div v-for="(log, index) in logs"
+           :key="index"
            class="log-line"
            :class="getLogClass(log)">
         <span class="log-time">{{ log.time }}</span>
@@ -24,7 +24,7 @@ const props = defineProps({
 
 const logContent = ref(null)
 
-// 根據日誌內容設置不同的樣式
+// Set different styles based on log content
 const getLogClass = (log) => {
   if (log.message.includes('成功')) return 'success'
   if (log.message.includes('開始')) return 'info'
@@ -32,7 +32,7 @@ const getLogClass = (log) => {
   return ''
 }
 
-// 監聽日誌變化，自動滾動到底部
+// Watch log changes and auto scroll to bottom
 watch(() => props.logs, async () => {
   await nextTick()
   if (logContent.value) {
@@ -104,4 +104,4 @@ watch(() => props.logs, async () => {
 .log-content::-webkit-scrollbar-thumb:hover {
   background: #666;
 }
-</style> 
+</style>

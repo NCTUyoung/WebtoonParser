@@ -30,6 +30,7 @@
     "exceljs": "^4.4.0",
     "iconv-lite": "^0.6.3",
     "node-schedule": "^2.1.1",
+    "pinia": "^3.0.2",
     "sass": "^1.71.1",
     "vue": "^3.4.19"
   },

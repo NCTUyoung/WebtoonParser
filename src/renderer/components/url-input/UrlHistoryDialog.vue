@@ -21,7 +21,7 @@
         </el-button>
       </div>
     </template>
-    
+
     <div class="dialog-content">
       <!-- 智能輸入區：搜索/新增網址 -->
       <div class="search-bar">
@@ -35,7 +35,7 @@
             <el-icon><Search /></el-icon>
           </template>
         </el-input>
-        
+
         <div class="quick-actions">
           <el-button
             @click="tryAddCurrentInput"
@@ -49,7 +49,7 @@
           </div>
         </div>
       </div>
-      
+
       <!-- URL table -->
       <url-table
         :data="urlHistory"
@@ -59,7 +59,7 @@
         @open-url="openExternalUrl"
         @add-to-input="addToInput"
       />
-      
+
       <!-- Simplified footer status -->
       <div class="dialog-footer">
         <span class="status-text">{{ urlHistory.length }} 個網址</span>
@@ -68,7 +68,7 @@
         </span>
       </div>
     </div>
-    
+
     <!-- Delete confirmation dialog -->
     <delete-confirm-dialog
       v-model="deleteConfirmVisible"
@@ -84,7 +84,7 @@ import { ElMessage } from 'element-plus'
 import { Document, Search, Plus, Check, Close } from '@element-plus/icons-vue'
 import UrlTable from './UrlTable.vue'
 import DeleteConfirmDialog from './DeleteConfirmDialog.vue'
-import { isValidUrl, formatUrl, generateLabelFromUrl } from '@/utils/urlUtils'
+import { isValidUrl, formatUrl, generateLabelFromUrl } from '../../utils/urlUtils'
 
 interface HistoryItem {
   url: string
@@ -104,8 +104,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits([
-  'update:modelValue', 
-  'update:history', 
+  'update:modelValue',
+  'update:history',
   'open-url',
   'add-to-input'
 ])
@@ -144,9 +144,9 @@ const tryAddCurrentInput = () => {
     }, 3000)
     return
   }
-  
+
   const formattedUrl = formatUrl(inputValue.value)
-  
+
   if (!isValidUrl(formattedUrl)) {
     errorMessage.value = '請輸入有效的網址'
     setTimeout(() => {
@@ -154,7 +154,7 @@ const tryAddCurrentInput = () => {
     }, 3000)
     return
   }
-  
+
   // 檢查是否已存在
   if (urlHistory.value.some(item => item.url === formattedUrl)) {
     errorMessage.value = '該網址已存在於列表中'
@@ -163,10 +163,10 @@ const tryAddCurrentInput = () => {
     }, 3000)
     return
   }
-  
+
   // 生成默認標籤
   const label = generateLabelFromUrl(formattedUrl)
-  
+
   // 添加新URL
   addUrl(formattedUrl, label)
 }
@@ -186,14 +186,14 @@ const addUrl = (url: string, label: string) => {
     url,
     label
   }
-  
+
   urlHistory.value = [...urlHistory.value, newItem]
   ElMessage.success('網址已添加')
-  
+
   // 清空輸入和錯誤
   inputValue.value = ''
   errorMessage.value = ''
-  
+
   autoSave()
 }
 
@@ -214,7 +214,7 @@ const saveHistory = () => {
     url: item.url,
     label: item.label
   }))
-  
+
   emit('update:history', cleanHistory)
   showAutoSaveStatus()
 }
@@ -225,7 +225,7 @@ const autoSave = () => {
     url: item.url,
     label: item.label
   }))
-  
+
   emit('update:history', cleanHistory)
   showAutoSaveStatus()
 }
@@ -247,11 +247,11 @@ const confirmDelete = (item: HistoryItem) => {
 // Delete URL
 const deleteUrl = () => {
   if (!itemToDelete.value) return
-  
+
   urlHistory.value = urlHistory.value.filter(item => item.url !== itemToDelete.value?.url)
   ElMessage.success('網址已刪除')
   autoSave()
-  
+
   deleteConfirmVisible.value = false
   itemToDelete.value = null
 }
@@ -354,7 +354,7 @@ watch(() => props.history, (newHistory) => {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .quick-actions {
     justify-content: flex-end;
     margin-top: 8px;
@@ -370,4 +370,4 @@ watch(() => props.history, (newHistory) => {
 :deep(.url-history-dialog .el-dialog__body) {
   padding: 16px;
 }
-</style> 
+</style>

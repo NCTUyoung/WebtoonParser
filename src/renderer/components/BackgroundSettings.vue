@@ -2,9 +2,9 @@
   <div class="background-settings">
     <!-- Help toggle button -->
     <div class="help-toggle-container">
-      <el-button 
+      <el-button
         link
-        class="help-toggle-btn" 
+        class="help-toggle-btn"
         @click="toggleHelp"
       >
         <el-icon v-if="showHelp"><ArrowDown /></el-icon>
@@ -12,7 +12,7 @@
         <span>{{ showHelp ? '隱藏說明' : '顯示說明' }}</span>
       </el-button>
     </div>
-    
+
     <!-- Help content -->
     <div class="help-guide-container" :class="{ 'has-content': showHelp }">
       <transition name="fade">
@@ -23,7 +23,7 @@
               <span>背景設置說明</span>
             </div>
           </div>
-          
+
           <div class="help-content">
             <div class="help-category">
               <div class="category-title">背景類型</div>
@@ -36,7 +36,7 @@
                 </div>
               </div>
             </div>
-            
+
             <div class="help-category">
               <div class="category-title">使用提示</div>
               <div class="tips-list">
@@ -49,7 +49,7 @@
         </div>
       </transition>
     </div>
-    
+
     <div class="settings-main">
       <!-- Background type selection -->
       <div class="type-selection">
@@ -58,7 +58,7 @@
           <el-radio value="custom">自定義圖片</el-radio>
         </el-radio-group>
       </div>
-      
+
       <!-- Custom image upload section -->
       <div v-if="backgroundType === 'custom'" class="custom-image-section">
         <div class="upload-container">
@@ -81,46 +81,46 @@
             </div>
           </el-upload>
         </div>
-        
+
         <div class="image-settings">
           <div class="setting-item">
             <span class="setting-label">透明度</span>
-            <el-slider 
-              v-model="opacity" 
-              :min="0.1" 
-              :max="1" 
-              :step="0.05" 
+            <el-slider
+              v-model="opacity"
+              :min="0.1"
+              :max="1"
+              :step="0.05"
               :format-tooltip="(val: number) => Math.round(val * 100) + '%'"
               @change="handleOpacityChange"
             />
           </div>
-          
+
           <div class="setting-item">
             <span class="setting-label">模糊效果</span>
-            <el-slider 
-              v-model="blurAmount" 
-              :min="0" 
-              :max="20" 
-              :step="1" 
+            <el-slider
+              v-model="blurAmount"
+              :min="0"
+              :max="20"
+              :step="1"
               :format-tooltip="(val: number) => val + 'px'"
               @change="handleBlurChange"
             />
           </div>
         </div>
       </div>
-      
+
       <!-- Preview and actions -->
       <div class="actions">
-        <el-button 
-          type="primary" 
+        <el-button
+          type="primary"
           @click="applySettings"
           :disabled="!hasChanges"
         >
           應用設置
         </el-button>
-        
-        <el-button 
-          v-if="backgroundType === 'custom' && imageUrl" 
+
+        <el-button
+          v-if="backgroundType === 'custom' && imageUrl"
           @click="resetSettings"
         >
           重置設置
@@ -134,28 +134,17 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ArrowDown, QuestionFilled, InfoFilled, Edit, Plus } from '@element-plus/icons-vue'
+import { useSettingsStore } from '../stores'
 
-// Define props and emits
-const props = defineProps({
-  modelValue: {
-    type: Object,
-    default: () => ({
-      type: 'default',
-      imageUrl: '',
-      opacity: 0.8,
-      blur: 0
-    })
-  }
-})
+// Initialize settings store
+const settingsStore = useSettingsStore()
 
-const emit = defineEmits(['update:modelValue', 'apply'])
-
-// Local state
-const backgroundType = ref(props.modelValue.type || 'default')
-const imageUrl = ref(props.modelValue.imageUrl || '')
-const opacity = ref(props.modelValue.opacity || 0.8)
-const blurAmount = ref(props.modelValue.blur || 0)
-const originalSettings = ref({ ...props.modelValue })
+// Use store's backgroundSettings as source data
+const backgroundType = ref(settingsStore.backgroundSettings.type || 'default')
+const imageUrl = ref(settingsStore.backgroundSettings.imageUrl || '')
+const opacity = ref(settingsStore.backgroundSettings.opacity || 0.8)
+const blurAmount = ref(settingsStore.backgroundSettings.blur || 0)
+const originalSettings = ref({ ...settingsStore.backgroundSettings })
 const showHelp = ref(false)
 
 // Computed properties
@@ -169,7 +158,7 @@ const hasChanges = computed(() => {
 // Methods
 const toggleHelp = () => {
   showHelp.value = !showHelp.value
-  
+
   nextTick(() => {
     if (showHelp.value) {
       // Logic when showing help
@@ -193,36 +182,36 @@ const beforeUpload = (file: File) => {
     ElMessage.error('只能上傳圖片文件！')
     return false
   }
-  
+
   // Validate file size (max 5MB)
   const isLt5M = file.size / 1024 / 1024 < 5
   if (!isLt5M) {
     ElMessage.error('圖片大小不能超過 5MB！')
     return false
   }
-  
+
   return true
 }
 
 const handleCustomUpload = async (options: any) => {
   const file = options.file
-  
+
   try {
-    // 先转换为base64
+    // Convert to base64 first
     const reader = new FileReader()
     reader.readAsDataURL(file)
     reader.onload = async (e) => {
       if (e.target?.result) {
         const dataUrl = e.target.result as string
-        
+
         try {
-          // 创建一个简单的数据URL，避免传递复杂对象
+          // Create a simple dataURL to avoid passing complex objects
           const simpleDataUrl = dataUrl.toString()
-          
-          // 调用主进程保存图片并获取文件URL
+
+          // Call main process to save image and get file URL
           const fileUrl = await window.electron.invoke('upload-background-image', simpleDataUrl)
-          
-          // 更新本地状态
+
+          // Update local state
           imageUrl.value = fileUrl
           ElMessage.success('圖片上傳成功')
         } catch (error) {
@@ -252,13 +241,13 @@ const applySettings = () => {
     opacity: opacity.value,
     blur: blurAmount.value
   }
-  
-  emit('update:modelValue', settings)
-  emit('apply', settings)
-  
+
+  settingsStore.backgroundSettings = settings
+  settingsStore.saveBackgroundSettings()
+
   // Update original settings to track changes
   originalSettings.value = { ...settings }
-  
+
   ElMessage.success('背景設置已應用')
 }
 
@@ -279,10 +268,10 @@ const resetSettings = () => {
           opacity: 0.8,
           blur: 0
         }
-        
+
         // 通知父组件
-        emit('update:modelValue', originalSettings.value)
-        
+        settingsStore.backgroundSettings = originalSettings.value
+
         ElMessage.success('背景設置已重置')
       })
       .catch(error => {
@@ -298,8 +287,8 @@ const resetSettings = () => {
   }
 }
 
-// Watch for external changes
-watch(() => props.modelValue, (newValue) => {
+// Watch for external changes from store instead of props
+watch(() => settingsStore.backgroundSettings, (newValue) => {
   if (JSON.stringify(newValue) !== JSON.stringify({
     type: backgroundType.value,
     imageUrl: imageUrl.value,
@@ -316,6 +305,9 @@ watch(() => props.modelValue, (newValue) => {
 
 // Load saved settings on mount
 onMounted(() => {
+  // 加载设置
+  settingsStore.loadSettings()
+
   try {
     const savedShowHelp = localStorage.getItem('background-settings-show-help')
     if (savedShowHelp !== null) {
@@ -587,15 +579,15 @@ watch(showHelp, (newValue) => {
   .upload-placeholder {
     height: 150px;
   }
-  
+
   .setting-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }
-  
+
   .setting-label {
     min-width: auto;
   }
 }
-</style> 
+</style>

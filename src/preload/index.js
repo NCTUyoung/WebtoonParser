@@ -5,7 +5,7 @@ function addDpiFixingStyles() {
   document.addEventListener('DOMContentLoaded', () => {
     // Create a style element
     const style = document.createElement('style')
-    
+
     // Add CSS to fix text rendering
     style.textContent = `
       * {
@@ -13,7 +13,7 @@ function addDpiFixingStyles() {
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
       }
-      
+
       /* Prevent blurry text at non-integer scaling factors */
       @media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
         * {
@@ -21,7 +21,7 @@ function addDpiFixingStyles() {
         }
       }
     `
-    
+
     // Append to document head
     document.head.appendChild(style)
   })
@@ -45,13 +45,14 @@ contextBridge.exposeInMainWorld('electron', {
       'open-external-link',
       'save-background-settings',
       'save-url-history',
-      'save-custom-filename'
+      'save-custom-filename',
+      'save-append-mode'
     ]
     if (validChannels.includes(channel)) {
       ipcRenderer.send(channel, data)
     }
   },
-  
+
   // Invoke methods and receive response
   invoke: (channel, data) => {
     const validChannels = [
@@ -65,15 +66,16 @@ contextBridge.exposeInMainWorld('electron', {
       'reset-background-image',
       'load-url-history',
       'load-custom-filename',
-      'list-excel-files'
+      'list-excel-files',
+      'load-append-mode'
     ]
     if (validChannels.includes(channel)) {
       return ipcRenderer.invoke(channel, data)
     }
-    
+
     return Promise.reject(new Error(`未授權調用通道 "${channel}"`))
   },
-  
+
   // Register event listeners
   on: (channel, callback) => {
     const validChannels = [
@@ -84,11 +86,11 @@ contextBridge.exposeInMainWorld('electron', {
       'next-run-time'
     ]
     if (validChannels.includes(channel)) {
-      // Deliberately strip event as it includes `sender` 
+      // Deliberately strip event as it includes `sender`
       ipcRenderer.on(channel, (event, ...args) => callback(...args))
     }
   },
-  
+
   // Remove all listeners for a channel
   removeAllListeners: (channel) => {
     const validChannels = [
@@ -102,6 +104,6 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.removeAllListeners(channel)
     }
   },
-  
+
   platform: process.platform
 })

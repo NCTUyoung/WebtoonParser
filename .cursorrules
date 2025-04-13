@@ -4,4 +4,7 @@
 comments.language = english
 
 # Rule 2: Review changes after each modification to ensure they are reasonable
-review.after_changes = true 
+review.after_changes = true
+
+# Rule 3: Minimize JSDoc usage, only use when absolutely necessary
+jsdoc.minimize = true

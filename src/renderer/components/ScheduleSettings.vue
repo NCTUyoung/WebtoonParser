@@ -1,10 +1,10 @@
 <template>
   <div class="schedule-settings">
-    <!-- 說明切換按鈕 -->
+    <!-- Help toggle button -->
     <div class="help-toggle-container">
-      <el-button 
+      <el-button
         link
-        class="help-toggle-btn" 
+        class="help-toggle-btn"
         @click="toggleHelp"
       >
         <el-icon v-if="showHelp"><ArrowDown /></el-icon>
@@ -12,23 +12,23 @@
         <span>{{ showHelp ? '隱藏說明' : '顯示說明' }}</span>
       </el-button>
     </div>
-    
-    <!-- 說明內容 -->
+
+    <!-- Help content -->
     <div class="help-guide-container" :class="{ 'has-content': showHelp }">
       <transition name="fade">
         <div v-if="showHelp" class="schedule-help">
           <div class="help-section">
-            <!-- 說明標題 -->
+            <!-- Help title -->
             <div class="help-header">
               <div class="help-title">
                 <el-icon><InfoFilled /></el-icon>
                 <span>定時設置說明</span>
               </div>
             </div>
-            
-            <!-- 說明內容 -->
+
+            <!-- Help content -->
             <div class="help-content">
-              <!-- 定時類型說明 -->
+              <!-- Schedule type description -->
               <div class="help-category">
                 <div class="category-title">定時類型</div>
                 <div class="tips-list">
@@ -40,8 +40,8 @@
                   </div>
                 </div>
               </div>
-              
-              <!-- 使用提示 -->
+
+              <!-- Usage tips -->
               <div class="help-category">
                 <div class="category-title">使用提示</div>
                 <div class="tips-list">
@@ -56,14 +56,14 @@
         </div>
       </transition>
     </div>
-    
+
     <div class="schedule-main">
       <div class="settings-form">
         <el-form :model="settings" class="schedule-form">
           <div class="form-row">
             <el-form-item label="定時類型">
-              <el-select 
-                v-model="settings.scheduleType" 
+              <el-select
+                v-model="settings.scheduleType"
                 class="schedule-type-select"
                 @change="onSettingChange"
               >
@@ -77,8 +77,8 @@
             </el-form-item>
 
             <el-form-item label="星期" v-if="settings.scheduleType === 'weekly'">
-              <el-select 
-                v-model="settings.day" 
+              <el-select
+                v-model="settings.day"
                 class="day-select"
                 @change="onSettingChange"
               >
@@ -104,8 +104,8 @@
             </el-form-item>
 
             <el-form-item label="時區">
-              <el-select 
-                v-model="settings.timezone" 
+              <el-select
+                v-model="settings.timezone"
                 class="timezone-select"
                 @change="onSettingChange"
               >
@@ -119,7 +119,7 @@
             </el-form-item>
           </div>
         </el-form>
-        
+
         <div v-if="isRunning" class="next-run-info">
           <el-tag type="success">
             下次執行時間：{{ getNextRunTimeDisplay() }}
@@ -128,8 +128,8 @@
       </div>
 
       <div class="schedule-actions">
-        <el-button 
-          :type="isRunning ? 'danger' : 'primary'" 
+        <el-button
+          :type="isRunning ? 'danger' : 'primary'"
           @click="toggleSchedule"
           plain
         >
@@ -143,34 +143,38 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { ArrowDown, QuestionFilled, InfoFilled } from '@element-plus/icons-vue'
+import { useScheduleStore } from '../stores'
 
-const props = defineProps({
-  schedule: {
-    type: Object,
-    default: () => ({
-      scheduleType: 'weekly',
-      day: '五',
-      hour: '18',
-      minute: '00',
-      timezone: 'Asia/Taipei'
-    })
+// Define schedule settings interface
+interface ScheduleSettings {
+  scheduleType: string;
+  day: string;
+  hour: string;
+  minute: string;
+  timezone: string;
+}
+
+// Initialize schedule store
+const scheduleStore = useScheduleStore()
+
+// Create local state for form binding and to avoid directly modifying store
+const settings = computed<ScheduleSettings>({
+  get: () => {
+    return {
+      scheduleType: scheduleStore.settings.scheduleType,
+      day: scheduleStore.settings.day,
+      hour: scheduleStore.settings.hour,
+      minute: scheduleStore.settings.minute,
+      timezone: scheduleStore.settings.timezone
+    }
   },
-  isRunning: {
-    type: Boolean,
-    default: false
-  },
-  nextRunTime: {
-    type: String,
-    default: ''
+  set: (value: ScheduleSettings) => {
+    scheduleStore.settings = value
+    scheduleStore.saveSettings()
   }
 })
 
-const emit = defineEmits(['update:schedule', 'toggle-schedule'])
-
-// 建立本地狀態，用來作為表單綁定的數據，並避免直接修改 props
-const settings = ref({ ...props.schedule })
-
-// 時間選擇器的值，用本地 settings 中的 hour 與 minute 生成 Date 物件
+// Computed property for time picker, generate Date object from settings hour and minute
 const timeValue = computed({
   get: () => {
     const time = new Date()
@@ -180,47 +184,36 @@ const timeValue = computed({
   },
   set: (value: Date) => {
     if (value) {
-      settings.value.hour = value.getHours().toString().padStart(2, '0')
-      settings.value.minute = value.getMinutes().toString().padStart(2, '0')
-      // 不直接發送更新，由下面的 watch 處理同步
+      const newSettings = { ...settings.value }
+      newSettings.hour = value.getHours().toString().padStart(2, '0')
+      newSettings.minute = value.getMinutes().toString().padStart(2, '0')
+      settings.value = newSettings
     }
   }
 })
 
-// 當本地數據發生改變時，僅在與父組件傳入的數據不同時才發送更新
-const updateSettings = () => {
-  if (JSON.stringify(settings.value) !== JSON.stringify(props.schedule)) {
-    emit('update:schedule', { ...settings.value })
-  }
+// Computed property for isRunning
+const isRunning = computed(() => {
+  return scheduleStore.isRunning
+})
+
+// Computed property for nextRunTime
+const nextRunTime = computed(() => {
+  return scheduleStore.nextRunTime
+})
+
+// Update settings when local data changes
+const onSettingChange = () => {
+  scheduleStore.saveSettings()
 }
 
-// 當本地 settings 改變時觸發更新到父組件
-watch(
-  settings,
-  () => {
-    updateSettings()
-  },
-  { deep: true }
-)
-
-// 當父組件的 schedule 更新時，同步到本地（避免重複更新）
-watch(
-  () => props.schedule,
-  (newVal) => {
-    if (JSON.stringify(newVal) !== JSON.stringify(settings.value)) {
-      settings.value = { ...newVal }
-    }
-  },
-  { deep: true }
-)
-
-// 定時類型選項
+// Schedule type options
 const scheduleTypes = [
   { label: '每周', value: 'weekly' },
   { label: '每日', value: 'daily' }
 ]
 
-// 星期選項
+// Weekday options
 const weekDays = [
   { label: '星期一', value: '一' },
   { label: '星期二', value: '二' },
@@ -231,7 +224,7 @@ const weekDays = [
   { label: '星期日', value: '日' }
 ]
 
-// 時區選項
+// Timezone options
 const timezones = [
   'Asia/Taipei',
   'Asia/Tokyo',
@@ -240,39 +233,34 @@ const timezones = [
   'Asia/Seoul'
 ]
 
-// 切換定時任務
+// Toggle schedule task
 const toggleSchedule = () => {
-  emit('toggle-schedule')
+  scheduleStore.toggleSchedule()
 }
 
-// 當選擇星期、時間或時區時觸發更新
-const onSettingChange = () => {
-  updateSettings()
-}
-
-// 獲取下次執行時間的顯示
+// Get next run time display
 const getNextRunTimeDisplay = () => {
-  if (props.nextRunTime) {
-    return props.nextRunTime
+  if (nextRunTime.value) {
+    return nextRunTime.value
   }
-  
-  // 如果沒有提供下次執行時間，則根據當前設置計算一個預估時間
+
+  // If next run time is not provided, calculate an estimated time based on current settings
   const now = new Date()
   const nextRun = new Date()
-  
-  // 設置小時和分鐘
+
+  // Set hours and minutes
   nextRun.setHours(parseInt(settings.value.hour))
   nextRun.setMinutes(parseInt(settings.value.minute))
   nextRun.setSeconds(0)
-  
-  // 如果是每日定時
+
+  // If daily schedule
   if (settings.value.scheduleType === 'daily') {
-    // 如果當前時間已經過了今天的執行時間，則設為明天
+    // If current time has passed today's execution time, set to tomorrow
     if (now > nextRun) {
       nextRun.setDate(nextRun.getDate() + 1)
     }
-  } 
-  // 如果是每周定時
+  }
+  // If weekly schedule
   else if (settings.value.scheduleType === 'weekly') {
     const dayMap: Record<string, number> = {
       '一': 1, '二': 2, '三': 3, '四': 4,
@@ -280,16 +268,16 @@ const getNextRunTimeDisplay = () => {
     }
     const targetDay = dayMap[settings.value.day]
     const currentDay = now.getDay()
-    
-    // 計算需要增加的天數
+
+    // Calculate days to add
     let daysToAdd = targetDay - currentDay
-    if (daysToAdd < 0) daysToAdd += 7 // 如果是過去的日子，加上一周
-    if (daysToAdd === 0 && now > nextRun) daysToAdd = 7 // 如果是今天但已過時間，加一周
-    
+    if (daysToAdd < 0) daysToAdd += 7 // If past day, add a week
+    if (daysToAdd === 0 && now > nextRun) daysToAdd = 7 // If today but time passed, add a week
+
     nextRun.setDate(nextRun.getDate() + daysToAdd)
   }
-  
-  // 格式化日期時間
+
+  // Format date and time
   return nextRun.toLocaleString('zh-TW', {
     year: 'numeric',
     month: '2-digit',
@@ -300,42 +288,46 @@ const getNextRunTimeDisplay = () => {
   })
 }
 
-// 顯示/隱藏說明的狀態
+// Help display state
 const showHelp = ref(false)
 
-// 切換說明顯示狀態
+// Toggle help display state
 const toggleHelp = () => {
   showHelp.value = !showHelp.value
-  
-  // 使用 nextTick 確保 DOM 更新後再進行過渡動畫
+
+  // Use nextTick to ensure DOM updates before transition
   nextTick(() => {
-    // 可以在這裡添加額外的邏輯，例如滾動到特定位置
+    // Additional logic can be added here, such as scrolling to specific position
     if (showHelp.value) {
-      // 當顯示說明時的邏輯
+      // Logic when showing help
     } else {
-      // 當隱藏說明時的邏輯
+      // Logic when hiding help
     }
   })
 }
 
-// 在組件掛載時從 localStorage 加載用戶偏好設置
+// Load user preference settings on component mount
 onMounted(() => {
+  // Load settings from store
+  scheduleStore.loadSettings()
+
+  // Load help display preference
   try {
     const savedShowHelp = localStorage.getItem('schedule-settings-show-help')
     if (savedShowHelp !== null) {
       showHelp.value = savedShowHelp === 'true'
     }
   } catch (e) {
-    console.error('加載偏好設置失敗', e)
+    console.error('Failed to load preference settings', e)
   }
 })
 
-// 監聽 showHelp 變化，保存用戶偏好設置
+// Watch for showHelp changes and save user preference
 watch(showHelp, (newValue) => {
   try {
     localStorage.setItem('schedule-settings-show-help', newValue.toString())
   } catch (e) {
-    console.error('保存偏好設置失敗', e)
+    console.error('Failed to save preference settings', e)
   }
 })
 </script>
@@ -519,11 +511,11 @@ watch(showHelp, (newValue) => {
   .help-section {
     padding: 10px;
   }
-  
+
   .help-title {
     font-size: 14px;
   }
-  
+
   .category-title {
     font-size: 13px;
   }
@@ -554,7 +546,7 @@ watch(showHelp, (newValue) => {
   .timezone-select {
     width: 100%;
   }
-  
+
   .help-toggle-btn {
     font-size: 12px;
     padding: 3px 6px;
@@ -569,39 +561,39 @@ watch(showHelp, (newValue) => {
   .help-guide-container {
     margin-bottom: 8px;
   }
-  
+
   .help-section {
     padding: 8px 6px;
   }
-  
+
   .help-content {
     gap: 8px;
   }
-  
+
   .help-category {
     gap: 4px;
   }
-  
+
   .category-title {
     font-size: 12px;
     padding-bottom: 3px;
   }
-  
+
   .tip-item {
     padding-left: 14px;
     font-size: 11px;
     line-height: 1.3;
   }
-  
+
   .tip-item::before {
     top: 6px;
     width: 5px;
     height: 5px;
   }
-  
+
   .fade-enter-active,
   .fade-leave-active {
-    max-height: 350px; /* 增加高度以適應移動設備上可能的更多內容 */
+    max-height: 350px; /* Increase height for potential more content on mobile devices */
   }
 
   .schedule-main {
@@ -621,7 +613,7 @@ watch(showHelp, (newValue) => {
   }
 }
 
-/* 說明切換按鈕樣式 */
+/* Help toggle button style */
 .help-toggle-container {
   display: flex;
   justify-content: flex-end;
@@ -642,7 +634,7 @@ watch(showHelp, (newValue) => {
   color: #409EFF;
 }
 
-/* 說明容器樣式 */
+/* Help container style */
 .help-guide-container {
   position: relative;
   min-height: 0;
@@ -653,20 +645,20 @@ watch(showHelp, (newValue) => {
 }
 
 .help-guide-container.has-content {
-  min-height: 16px; /* 最小高度，防止完全收縮 */
+  min-height: 16px; /* Minimum height, prevent full contraction */
 }
 
-/* 過渡動畫 */
+/* Transition animation */
 .fade-enter-active {
   transition: opacity 0.4s ease 0.1s, max-height 0.5s ease;
-  max-height: 300px;
+  max-height: 350px;
   overflow: hidden;
   position: relative;
 }
 
 .fade-leave-active {
   transition: opacity 0.3s ease, max-height 0.5s ease 0.1s;
-  max-height: 300px;
+  max-height: 350px;
   overflow: hidden;
   position: relative;
 }
@@ -676,4 +668,4 @@ watch(showHelp, (newValue) => {
   opacity: 0;
   max-height: 0;
 }
-</style> 
+</style>
